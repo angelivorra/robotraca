@@ -46,11 +46,13 @@
 	};
 	
 	$.Cassette.defaults 	= {
-		// song names. Assumes the path of each song is songs/name.filetype
-		songs			: [ 'BlueDucks_FourFlossFiveSix', 'BlankKytt_ThursdaySnowReprise', 'BlueDucks_FlossSuffersFromGammaRadiation', 'BlankKyt_RSPN' ],
+		// song names. Assumes the path of each song is audio/name.filetype
+		songs			: [ 'track1', 'track2' ],
 		fallbackMessage	: 'HTML5 audio not supported',
 		// initial sound volume
-		initialVolume	: 0.7
+		initialVolume	: 0.7,
+		// autoplay on load
+		autoplay		: false
 	};
 	
 	$.Cassette.prototype 	= {
@@ -87,6 +89,13 @@
 				_self.sound = new $.Sound();
 				// load events
 				_self._loadEvents();
+				
+				// autoplay if enabled
+				if( _self.options.autoplay ) {
+					setTimeout(function() {
+						_self._play();
+					}, 500);
+				}
 				
 			} );
 			
@@ -838,8 +847,8 @@
 		_init				: function() {
 		
 			this.sources	= {
-				mp3	: 'songs/' + this.name + '.mp3',
-				ogg	: 'songs/' + this.name + '.ogg'
+				mp3	: 'audio/' + this.name + '.mp3',
+				ogg	: 'audio/' + this.name + '.ogg'
 			};
 		
 		},
