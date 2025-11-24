@@ -6,7 +6,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #000000 0%, #2e0557 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -103,6 +103,7 @@ body {
     color: #fff;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     margin-bottom: 5px;
+    font-family: 'CustomFont', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .song-name {
@@ -110,6 +111,7 @@ body {
     color: #fff;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
     opacity: 0.9;
+    font-family: 'CustomFont', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Controls */
@@ -150,19 +152,18 @@ body {
         inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.control-img {
-    width: 80%;
-    height: auto;
-    max-width: 50px;
-    object-fit: contain;
+/* Font Awesome icons */
+.control-btn i {
+    font-size: 1.5em;
+    color: #333;
 }
 
 .play-btn {
     flex: 1.5;
 }
 
-.play-btn .control-img {
-    max-width: 60px;
+.play-btn i {
+    font-size: 2em;
 }
 
 .hidden {
@@ -175,6 +176,11 @@ body {
     top: 10px;
     right: 10px;
     z-index: 1000;
+    display: none;
+}
+
+.config-panel.debug-mode {
+    display: block;
 }
 
 .config-toggle {

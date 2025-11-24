@@ -12,12 +12,16 @@ const songs = [
 
 // Variables de configuración (modificables en tiempo real)
 let config = {
-    eyeDistance: 40,          // % de separación entre ojos
-    eyeVertical: 40,          // % posición vertical de ojos
-    songVertical: 70,         // % posición vertical del nombre de canción
-    controlsVertical: 85,     // % posición vertical de controles
-    leftEyeSize: 15,          // % tamaño ojo izquierdo
-    rightEyeSize: 15          // % tamaño ojo derecho
+  "eyeDistance": "44",
+  "eyeVertical": "35",
+  "songVertical": "9",
+  "controlsVertical": "56",
+  "leftEyeSize": "12",
+  "rightEyeSize": "19",
+  "robotNameSize": "3.5",
+  "songNameSize": "3",
+  "buttonSize": "20",
+  "buttonWidth": "35"
 };
 
 // Variables del reproductor
@@ -27,7 +31,6 @@ let isPlaying = false;
 // Elementos del DOM
 const audio = document.getElementById('audioPlayer');
 const playBtn = document.getElementById('playBtn');
-const stopBtn = document.getElementById('stopBtn');
 const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const songName = document.getElementById('songName');
@@ -46,6 +49,7 @@ const configOutput = document.getElementById('configOutput');
 function init() {
     loadSong(currentSongIndex);
     setupEventListeners();
+    checkDebugMode();
     setupConfigPanel();
     applyConfig();
     checkAutoplay();
@@ -54,7 +58,6 @@ function init() {
 // Configurar event listeners
 function setupEventListeners() {
     playBtn.addEventListener('click', togglePlay);
-    stopBtn.addEventListener('click', stop);
     prevBtn.addEventListener('click', previousSong);
     nextBtn.addEventListener('click', nextSong);
     
@@ -124,6 +127,42 @@ function setupConfigPanel() {
         applyConfig();
     });
     
+    // Robot name size
+    const robotNameSizeInput = document.getElementById('robotNameSize');
+    const robotNameSizeValue = document.getElementById('robotNameSizeValue');
+    robotNameSizeInput.addEventListener('input', (e) => {
+        config.robotNameSize = e.target.value;
+        robotNameSizeValue.textContent = e.target.value;
+        applyConfig();
+    });
+    
+    // Song name size
+    const songNameSizeInput = document.getElementById('songNameSize');
+    const songNameSizeValue = document.getElementById('songNameSizeValue');
+    songNameSizeInput.addEventListener('input', (e) => {
+        config.songNameSize = e.target.value;
+        songNameSizeValue.textContent = e.target.value;
+        applyConfig();
+    });
+    
+    // Button size
+    const buttonSizeInput = document.getElementById('buttonSize');
+    const buttonSizeValue = document.getElementById('buttonSizeValue');
+    buttonSizeInput.addEventListener('input', (e) => {
+        config.buttonSize = e.target.value;
+        buttonSizeValue.textContent = e.target.value;
+        applyConfig();
+    });
+    
+    // Button width
+    const buttonWidthInput = document.getElementById('buttonWidth');
+    const buttonWidthValue = document.getElementById('buttonWidthValue');
+    buttonWidthInput.addEventListener('input', (e) => {
+        config.buttonWidth = e.target.value;
+        buttonWidthValue.textContent = e.target.value;
+        applyConfig();
+    });
+    
     // Export config
     document.getElementById('exportConfig').addEventListener('click', exportConfig);
 }
@@ -148,8 +187,24 @@ function applyConfig() {
     // Posición de información de canción
     songInfo.style.top = `${config.songVertical}%`;
     
+    // Tamaño de textos
+    const robotNameEl = document.querySelector('.robot-name');
+    const songNameEl = document.querySelector('.song-name');
+    if (robotNameEl) robotNameEl.style.fontSize = `${config.robotNameSize}vw`;
+    if (songNameEl) songNameEl.style.fontSize = `${config.songNameSize}vw`;
+    
     // Posición de controles
     controls.style.bottom = `${100 - config.controlsVertical}%`;
+    
+    // Tamaño de botones
+    const controlBtns = document.querySelectorAll('.control-btn');
+    controlBtns.forEach(btn => {
+        btn.style.minHeight = `${config.buttonSize}px`;
+        btn.style.padding = `${config.buttonSize * 0.2}px`;
+    });
+    
+    // Ancho del contenedor de botones
+    controls.style.width = `${config.buttonWidth}%`;
 }
 
 // Exportar configuración
@@ -160,10 +215,23 @@ function exportConfig() {
     console.log('Configuración actual:', config);
 }
 
-// Verificar autoplay
+// Verificar modo debug
+function checkDebugMode() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('debug') && urlParams.get('debug') === '1') {
+        const configPanel = document.getElementById('configPanel');
+        configPanel.classList.add('debug-mode');
+    }
+}
+
+// Verificar autoplay (desde QR code o parámetro URL)
 function checkAutoplay() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('autoplay') || urlParams.has('play')) {
+    // Autoplay si viene de QR (cualquier parámetro sin debug) o explícitamente con autoplay/play
+    const hasParams = urlParams.toString().length > 0;
+    const isDebugOnly = urlParams.has('debug') && urlParams.toString() === 'debug=1';
+    
+    if (urlParams.has('autoplay') || urlParams.has('play') || (hasParams && !isDebugOnly)) {
         setTimeout(() => play(), 500);
     }
 }
@@ -180,7 +248,11 @@ function loadSong(index) {
 
 // Actualizar display
 function updateSongDisplay(name) {
-    songName.textContent = name;
+    if (isPlaying) {
+        songName.textContent = name;
+    } else {
+        songName.textContent = 'Pulse Play';
+    }
 }
 
 // Reproducir/Pausar
@@ -200,6 +272,7 @@ function play() {
         playPromise.then(() => {
             isPlaying = true;
             updatePlayButton(true);
+            updateSongDisplay(songs[currentSongIndex].name);
             startEyesAnimation();
         }).catch(error => {
             console.error('Error al reproducir:', error);
@@ -214,6 +287,7 @@ function pause() {
     audio.pause();
     isPlaying = false;
     updatePlayButton(false);
+    updateSongDisplay('');
     stopEyesAnimation();
 }
 
@@ -223,6 +297,7 @@ function stop() {
     audio.currentTime = 0;
     isPlaying = false;
     updatePlayButton(false);
+    updateSongDisplay('');
     stopEyesAnimation();
 }
 
@@ -248,15 +323,15 @@ function nextSong() {
 
 // Actualizar botón de play
 function updatePlayButton(playing) {
-    const playImg = playBtn.querySelector('.play-img');
-    const stopImg = playBtn.querySelector('.stop-img');
+    const playIcon = playBtn.querySelector('.play-icon');
+    const pauseIcon = playBtn.querySelector('.pause-icon');
     
     if (playing) {
-        playImg.classList.add('hidden');
-        stopImg.classList.remove('hidden');
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
     } else {
-        playImg.classList.remove('hidden');
-        stopImg.classList.add('hidden');
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
     }
 }
 
