@@ -13,15 +13,15 @@ const songs = [
 // Variables de configuración (modificables en tiempo real)
 let config = {
   "eyeDistance": "44",
-  "eyeVertical": "35",
+  "eyeVertical": "41",
   "songVertical": "9",
-  "controlsVertical": "56",
-  "leftEyeSize": "12",
+  "controlsVertical": "59",
+  "leftEyeSize": "13",
   "rightEyeSize": "19",
-  "robotNameSize": "3.5",
-  "songNameSize": "3",
-  "buttonSize": "20",
-  "buttonWidth": "35"
+  "robotNameSize": "11.5",
+  "songNameSize": "4",
+  "buttonSize": "6",
+  "buttonWidth": "55"
 };
 
 // Variables del reproductor
@@ -184,23 +184,26 @@ function applyConfig() {
     rightEye.style.transform = 'translate(-50%, -50%)';
     rightEye.style.width = `${config.rightEyeSize}%`;
     
-    // Posición de información de canción
+    // Posición de información de canción (relativa a robot-head)
     songInfo.style.top = `${config.songVertical}%`;
     
-    // Tamaño de textos
+    // Tamaño de textos (relativo al contenedor robot-head)
+    const robotHead = document.querySelector('.robot-head');
+    const headWidth = robotHead ? robotHead.offsetWidth : 600;
     const robotNameEl = document.querySelector('.robot-name');
     const songNameEl = document.querySelector('.song-name');
-    if (robotNameEl) robotNameEl.style.fontSize = `${config.robotNameSize}vw`;
-    if (songNameEl) songNameEl.style.fontSize = `${config.songNameSize}vw`;
+    if (robotNameEl) robotNameEl.style.fontSize = `${(config.robotNameSize / 100) * headWidth}px`;
+    if (songNameEl) songNameEl.style.fontSize = `${(config.songNameSize / 100) * headWidth}px`;
     
-    // Posición de controles
-    controls.style.bottom = `${100 - config.controlsVertical}%`;
+    // Posición de controles (relativa a robot-head)
+    controls.style.top = `${config.controlsVertical}%`;
     
-    // Tamaño de botones
+    // Tamaño de botones (relativo al contenedor)
     const controlBtns = document.querySelectorAll('.control-btn');
+    const buttonHeight = (config.buttonSize / 100) * headWidth;
     controlBtns.forEach(btn => {
-        btn.style.minHeight = `${config.buttonSize}px`;
-        btn.style.padding = `${config.buttonSize * 0.2}px`;
+        btn.style.minHeight = `${buttonHeight}px`;
+        btn.style.padding = `${buttonHeight * 0.2}px`;
     });
     
     // Ancho del contenedor de botones
@@ -369,6 +372,11 @@ function onError(e) {
 // Prevenir zoom
 document.addEventListener('gesturestart', function (e) {
     e.preventDefault();
+});
+
+// Recalcular posiciones cuando cambie el tamaño de la ventana
+window.addEventListener('resize', () => {
+    applyConfig();
 });
 
 // Inicializar cuando esté listo
