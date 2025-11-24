@@ -54,3 +54,43 @@ body{
 .notice code{background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:var(--neon)}
 
 @media (max-width:520px){.tape-window{flex:0 0 160px;height:74px}.wrap{padding:12px}.title h1{font-size:1.6rem}}
+
+/* CassettePlayer-like enhancements */
+.tape-window{
+    background-image: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 30%, rgba(255,255,255,0.02) 100%),
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0 2px, rgba(0,0,0,0.03) 2px 4px);
+    background-size: cover, 6px 6px;
+    position:relative;overflow:hidden
+}
+
+.tape-window::before{
+    content:'';position:absolute;inset:0;background-image:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));pointer-events:none
+}
+
+.spool{position:relative;transition:transform .2s linear}
+.spool.rotate{
+    animation: spool-rotate 2s linear infinite;
+}
+
+@keyframes spool-rotate{
+    from{transform:rotate(0)}
+    to{transform:rotate(360deg)}
+}
+
+/* Tape moving effect using a repeating linear gradient */
+.tape-window .tape-move{
+    position:absolute;inset:6px;border-radius:4px;pointer-events:none;z-index:1;
+    background-image:repeating-linear-gradient(90deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 6px);
+    opacity:0.18;mix-blend-mode:overlay;transform:translateZ(0);
+}
+
+.playing .tape-window .tape-move{animation: tapeflow 0.8s linear infinite}
+@keyframes tapeflow{from{background-position:0 0}to{background-position:40px 0}}
+
+/* Cassette labels / counter look */
+.track-info{font-family: 'Share Tech Mono', monospace;letter-spacing:1px}
+
+.display{gap:12px}
+
+/* Small polish for overlay */
+.overlay-play{font-weight:700;letter-spacing:1px}

@@ -10,12 +10,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const cassette = document.querySelector('.cassette-player');
 
     const tracks = [
-        {src: 'audio/track1.mp3', title: 'Track 1'},
-        {src: 'audio/track2.mp3', title: 'Track 2'}
+        {src: 'audio/track1.mp3', title: 'Sartenazos desde Plutón'},
+        {src: 'audio/track2.mp3', title: 'Gobierno de la IA'}
     ];
 
     let current = 0;
     let isPlaying = false;
+    let rafId = null;
 
     function loadTrack(i){
         current = i % tracks.length;
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             playBtn.textContent = '▮▮';
             cassette.classList.add('playing');
             overlay.hidden = true;
+            startSpoolAnimation();
         }).catch(()=>{
             // Autoplay blocked — show overlay to prompt user
             overlay.hidden = false;
@@ -54,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
         isPlaying = false;
         playBtn.textContent = '▶';
         cassette.classList.remove('playing');
+        stopSpoolAnimation();
     }
 
     function togglePlay(){
@@ -89,5 +92,47 @@ document.addEventListener('DOMContentLoaded', function() {
     if (wantAutoplay){
         // some browsers require user gesture — attempt and fall back to overlay
         play();
+    }
+
+    // Spool / tape animation handled with requestAnimationFrame for smoother visual
+    const leftSpool = document.querySelector('.spool-left');
+    const rightSpool = document.querySelector('.spool-right');
+    const tapeMove = document.createElement('div');
+    tapeMove.className = 'tape-move';
+    const tapeWindow = document.querySelector('.tape-window');
+    if (tapeWindow) tapeWindow.appendChild(tapeMove);
+
+    let lastTime = 0;
+    let tapeOffset = 0;
+
+    function animate(now){
+        if (!lastTime) lastTime = now;
+        const dt = now - lastTime;
+        lastTime = now;
+        // increase offset proportionally to playbackRate and time delta
+        const rate = isPlaying ? (audioEl.playbackRate || 1) : 0;
+        tapeOffset += dt * 0.02 * rate; // tuned constant for visual speed
+        tapeMove.style.backgroundPosition = `${Math.floor(tapeOffset)%100}px 0`;
+
+        // spin spools CSS transform slightly based on currentTime
+        if (isPlaying){
+            leftSpool.style.transform = `rotate(${(audioEl.currentTime*360)%360}deg)`;
+            rightSpool.style.transform = `rotate(${(audioEl.currentTime* -360)%360}deg)`;
+        }
+
+        rafId = requestAnimationFrame(animate);
+    }
+
+    function startSpoolAnimation(){
+        if (!rafId) rafId = requestAnimationFrame(animate);
+        leftSpool.classList.add('rotate');
+        rightSpool.classList.add('rotate');
+    }
+
+    function stopSpoolAnimation(){
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = null; lastTime = 0;
+        leftSpool.classList.remove('rotate');
+        rightSpool.classList.remove('rotate');
     }
 });
