@@ -2,9 +2,12 @@
 /* Main container */
 .vc-container{
 	text-align: center;
-	height: 500px;
+	height: auto;
+	min-height: 500px;
 	margin-bottom: 50px;
 	position: relative;
+	width: 100%;
+	max-width: 800px;
 }
 
 /* Tape elements */
@@ -18,6 +21,7 @@
 .vc-tape{
 	width: 586px;
 	height: 379px;
+	max-width: 100%;
 	margin: 30px auto 0;
 	position: relative;
 	-webkit-transition: all .4s ease-in-out;	
@@ -312,4 +316,149 @@ ul.vc-controls li,
 	letter-spacing: 1px;
 	color: #666;
 	text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+}
+
+/* ============================================
+   RESPONSIVE STYLES - MOBILE
+   ============================================ */
+
+/* Media query para tablets y móviles grandes */
+@media screen and (max-width: 768px) {
+	/* Fondo diferente para móvil */
+	body {
+		background: #b6b6b6 url(../images/bg-mobile.png) no-repeat center center fixed;
+		background-size: 100% 100%; /* Ajusta width y height */
+	}
+	
+	.vc-tape {
+		width: 100%;
+		height: auto;
+		aspect-ratio: 586 / 379; /* Mantiene la proporción */
+	}
+	
+	.vc-tape-back,
+	.vc-tape-front {
+		background-size: contain;
+	}
+	
+	.vc-tape-wheel {
+		width: 21%;
+		height: auto;
+		aspect-ratio: 1;
+		top: 29%;
+	}
+	
+	.vc-tape-wheel-left {
+		left: 18.5%;
+		box-shadow: 0 0 0 12% #000;
+	}
+	
+	.vc-tape-wheel-right {
+		right: 19%;
+	}
+	
+	.vc-tape-front span {
+		font-size: 3.5vw;
+		top: 22%;
+		left: 11.5%;
+	}
+	
+	/* Controles más pequeños en móvil */
+	ul.vc-controls {
+		width: 90%;
+		max-width: 440px;
+		margin: 0 auto;
+		left: 50%;
+		transform: translateX(-50%);
+		bottom: 10px;
+	}
+	
+	ul.vc-controls li {
+		width: 18%;
+		padding: 8px 5px;
+		font-size: 8px;
+	}
+	
+	ul.vc-controls li.vc-control-play {
+		width: 28%;
+	}
+	
+	ul.vc-controls li span:before {
+		font-size: 14px;
+		line-height: 40px;
+	}
+	
+	/* Control de volumen más pequeño */
+	.vc-volume-wrap {
+		width: 80px;
+		height: 80px;
+		margin-left: -250px;
+		bottom: -10px;
+	}
+	
+	.vc-volume-wrap:after {
+		font-size: 8px;
+		margin-top: 10px;
+	}
+	
+	.container {
+		padding: 10px;
+	}
+	
+	.container > header {
+		margin: 5px;
+		padding: 10px 5px;
+	}
+	
+	.container > header h1 {
+		font-size: 1.5em;
+	}
+}
+
+/* Media query para móviles pequeños */
+@media screen and (max-width: 480px) {
+	ul.vc-controls {
+		width: 95%;
+		padding: 5px;
+		height: auto;
+	}
+	
+	ul.vc-controls li {
+		width: 16%;
+		padding: 5px 3px;
+		font-size: 7px;
+		line-height: 35px;
+	}
+	
+	ul.vc-controls li.vc-control-play {
+		width: 24%;
+	}
+	
+	ul.vc-controls li span:before {
+		font-size: 12px;
+		line-height: 35px;
+	}
+	
+	.vc-volume-wrap {
+		width: 70px;
+		height: 70px;
+		margin-left: -200px;
+		bottom: -15px;
+	}
+	
+	.vc-tape-front span {
+		font-size: 4vw;
+	}
+	
+	.container > header h1 {
+		font-size: 1.2em;
+	}
+}
+
+/* Asegurar que el cassette siempre se vea completo */
+@media screen and (max-width: 600px) {
+	.vc-container {
+		min-height: auto;
+		margin-bottom: 20px;
+	}
 }
