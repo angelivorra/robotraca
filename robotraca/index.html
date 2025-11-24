@@ -3,58 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robotraca — Retro Sci‑Fi Cassette Player</title>
+    <title>Cassette Player</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/vendor/cassette-player.css">
+    <link rel="stylesheet" href="css/player.css">
 </head>
 <body>
-    <main class="wrap">
-        <header class="title">
-            <h1>Robotraca</h1>
-            <p class="subtitle">Retro Sci‑Fi Cassette Player — escanea el QR para autoplay</p>
-        </header>
+    <div class="container">
+        <div class="info">
+            <h1>Old School Cassette Player with HTML5 Audio</h1>
+            <p>Vintage format meets modern web tech: an HTML5 audio player with realistic controls</p>
+            <p class="note">Best viewed & listened to in modern browsers</p>
+        </div>
 
-        <section class="cassette" aria-label="Cassette music player">
-            <div class="display-area">
-                <div>
-                    <h2 class="title">Robotraca — Cassette Player</h2>
-                    <div class="notice"><small>Escanea el QR para intentar autoplay (ver README).</small></div>
+        <div id="cassette_player">
+            <div id="volume_control">
+                <label>VOLUME</label>
+                <input type="text" id="volume_knob" value="50" class="dial" />
+            </div>
+
+            <div id="controls">
+                <div id="play" class="control" title="Play">
+                    <span>PLAY</span>
+                    <span class="icon">▶</span>
                 </div>
-                <div id="cp-track-title">Track 1</div>
+                <div id="rew" class="control" title="Rewind">
+                    <span>REW</span>
+                    <span class="icon">⏪</span>
+                </div>
+                <div id="ff" class="control" title="Fast Forward">
+                    <span>FF</span>
+                    <span class="icon">⏩</span>
+                </div>
+                <div id="stop" class="control" title="Stop">
+                    <span>STOP</span>
+                    <span class="icon">▪</span>
+                </div>
+                <div id="switch_side" class="control" title="Switch Side">
+                    <span>SWITCH</span>
+                    <span class="icon">⇄</span>
+                </div>
             </div>
 
-            <div class="spools">
-                <div class="spool spool-left"></div>
-                <div class="spool spool-right"></div>
+            <div id="cassette">
+                <div class="tape_reel" id="reel_left">
+                    <div class="reel"></div>
+                </div>
+                <div class="tape_reel" id="reel_right">
+                    <div class="reel"></div>
+                </div>
+                <div id="tape_visible">
+                    <div class="tape"></div>
+                </div>
+                <div id="cassette_label">
+                    <div class="side_a">
+                        <h2>Side A</h2>
+                        <p class="track_title">Track 1</p>
+                    </div>
+                    <div class="side_b">
+                        <h2>Side B</h2>
+                        <p class="track_title">Track 2</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="controls">
-                <button id="cp-rw" class="btn secondary">⏪</button>
-                <button id="cp-play" class="btn">▶</button>
-                <button id="cp-stop" class="btn secondary">▪</button>
-                <button id="cp-ff" class="btn secondary">⏩</button>
-                <button id="cp-switch" class="btn secondary">SWITCH</button>
+            <div id="time_display">
+                <span id="current_time">00:00</span> / <span id="total_time">00:00</span>
             </div>
 
-            <div class="track-list">
-                <button class="btn secondary" data-index="0">Pista 1</button>
-                <button class="btn secondary" data-index="1">Pista 2</button>
-            </div>
+            <audio id="audio_player" preload="auto">
+                <source src="audio/track1.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
 
-            <div style="display:flex;justify-content:center;margin-top:10px;gap:8px;align-items:center">
-                <label style="font-size:0.9rem;color:rgba(0,255,209,0.7)">VOLUME</label>
-                <input id="cp-volume" type="range" min="0" max="1" step="0.01" value="0.9">
-            </div>
+        <div class="credits">
+            <h3>SONGS:</h3>
+            <ul>
+                <li>Track 1 (Side A)</li>
+                <li>Track 2 (Side B)</li>
+            </ul>
+        </div>
+    </div>
 
-            <audio id="audioElement" preload="auto"></audio>
-            <div id="overlayPlay" class="overlay-play" hidden>Pulsa para reproducir</div>
-        </section>
-
-        <footer class="notice">
-            <small>Sube tus MP3 a la carpeta <code>audio/</code> como <code>track1.mp3</code> y <code>track2.mp3</code>.</small>
-        </footer>
-    </main>
-
-    <script src="js/vendor/cassette-player.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/jquery.knob.js"></script>
+    <script src="js/player.js"></script>
 </body>
 </html>

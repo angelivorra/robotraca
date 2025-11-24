@@ -1,96 +1,67 @@
-:root{
-    --bg:#07070a;
-    --neon:#00ffd1;
-    --accent:#5af0c9;
-    --muted:#111117;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-*{box-sizing:border-box}
-body{
-    margin:0;
-    min-height:100vh;
-    background: radial-gradient(ellipse at bottom, #071026 0%, #05050a 60%);
-    color:var(--neon);
-    font-family: 'Share Tech Mono', 'Courier New', monospace;
-    -webkit-font-smoothing:antialiased;
+body {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
 }
 
-.wrap{max-width:760px;margin:30px auto;padding:20px}
-.title{text-align:center;margin-bottom:18px}
-.title h1{font-size:2.4rem;margin:0;text-shadow:0 0 8px rgba(0,255,209,0.12);letter-spacing:2px}
-.subtitle{color:rgba(0,255,209,0.7);margin-top:6px;font-size:0.95rem}
-
-.cassette-player{
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.2));
-    border:1px solid rgba(0,255,209,0.12);
-    padding:18px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.6);
-    position:relative;overflow:hidden
+.container {
+    max-width: 900px;
+    width: 100%;
 }
 
-.display{display:flex;align-items:center;gap:16px;padding:6px}
-.tape-window{flex:0 0 220px;height:90px;background:linear-gradient(90deg,#080808 0,#0b0b12 50%,#06060a 100%);border-radius:6px;position:relative;border:2px solid rgba(0,255,209,0.06);display:flex;align-items:center;justify-content:space-around;padding:12px}
-.spool{width:40px;height:40px;background:radial-gradient(circle at 30% 30%, #9b9b9b, #444);border-radius:50%;box-shadow:inset 0 2px 6px rgba(0,0,0,0.6)}
-.spool::after{content:'';position:absolute;width:8px;height:8px;background:#111;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%)}
-.spool-left,.spool-right{transition:transform 0.5s linear}
-.playing .spool-left{transform:rotate(120deg)}
-.playing .spool-right{transform:rotate(-120deg)}
-
-.track-info{flex:1;text-align:right}
-#trackTitle{font-weight:700;font-size:1.05rem}
-#trackTime{font-size:0.9rem;color:rgba(0,255,209,0.7);margin-top:6px}
-
-.controls{display:flex;justify-content:center;gap:12px;margin-top:14px}
-.ctrl{background:linear-gradient(180deg,var(--neon),var(--accent));color:#041016;border:none;padding:12px 18px;border-radius:10px;font-size:1.1rem;cursor:pointer;box-shadow:0 6px 18px rgba(0,255,209,0.08);transition:transform .12s}
-.ctrl:active{transform:translateY(2px)}
-.play{font-weight:700;padding-left:18px;padding-right:18px}
-
-.track-list{display:flex;justify-content:center;gap:10px;margin-top:12px}
-.track-button{background:transparent;border:1px solid rgba(0,255,209,0.08);color:var(--neon);padding:8px 12px;border-radius:6px;cursor:pointer}
-.track-button.active{background:rgba(0,255,209,0.06);border-color:rgba(90,240,201,0.18)}
-
-.overlay-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.75));color:var(--neon);font-size:1.1rem}
-
-.notice{margin-top:14px;text-align:center;color:rgba(0,255,209,0.6)}
-.notice code{background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:var(--neon)}
-
-@media (max-width:520px){.tape-window{flex:0 0 160px;height:74px}.wrap{padding:12px}.title h1{font-size:1.6rem}}
-
-/* CassettePlayer-like enhancements */
-.tape-window{
-    background-image: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 30%, rgba(255,255,255,0.02) 100%),
-        repeating-linear-gradient(90deg, rgba(0,0,0,0.2) 0 2px, rgba(0,0,0,0.03) 2px 4px);
-    background-size: cover, 6px 6px;
-    position:relative;overflow:hidden
+.info {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
-.tape-window::before{
-    content:'';position:absolute;inset:0;background-image:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));pointer-events:none
+.info h1 {
+    font-size: 2em;
+    margin-bottom: 15px;
+    font-weight: bold;
 }
 
-.spool{position:relative;transition:transform .2s linear}
-.spool.rotate{
-    animation: spool-rotate 2s linear infinite;
+.info p {
+    font-size: 1.1em;
+    margin-bottom: 10px;
 }
 
-@keyframes spool-rotate{
-    from{transform:rotate(0)}
-    to{transform:rotate(360deg)}
+.info .note {
+    font-size: 0.9em;
+    font-style: italic;
+    opacity: 0.9;
 }
 
-/* Tape moving effect using a repeating linear gradient */
-.tape-window .tape-move{
-    position:absolute;inset:6px;border-radius:4px;pointer-events:none;z-index:1;
-    background-image:repeating-linear-gradient(90deg, rgba(0,0,0,0.25) 0 2px, transparent 2px 6px);
-    opacity:0.18;mix-blend-mode:overlay;transform:translateZ(0);
+.credits {
+    margin-top: 40px;
+    padding: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: white;
+    backdrop-filter: blur(10px);
 }
 
-.playing .tape-window .tape-move{animation: tapeflow 0.8s linear infinite}
-@keyframes tapeflow{from{background-position:0 0}to{background-position:40px 0}}
+.credits h3 {
+    margin-bottom: 15px;
+    font-size: 1.2em;
+}
 
-/* Cassette labels / counter look */
-.track-info{font-family: 'Share Tech Mono', monospace;letter-spacing:1px}
+.credits ul {
+    list-style: none;
+}
 
-.display{gap:12px}
-
-/* Small polish for overlay */
-.overlay-play{font-weight:700;letter-spacing:1px}
+.credits li {
+    padding: 5px 0;
+    font-size: 0.95em;
+}

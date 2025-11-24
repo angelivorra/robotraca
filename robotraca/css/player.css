@@ -1,0 +1,198 @@
+#cassette_player {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
+    background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+#volume_control {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    text-align: center;
+}
+
+#volume_control label {
+    display: block;
+    color: #888;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+#controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.control {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 15px 20px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    border: 2px solid #444;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.control:hover {
+    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+    border-color: #555;
+    transform: translateY(-2px);
+}
+
+.control:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.control span:first-child {
+    font-size: 9px;
+    color: #888;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.control .icon {
+    font-size: 20px;
+    color: #ccc;
+}
+
+#cassette {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    background: linear-gradient(180deg, #f5f5f5 0%, #e0e0e0 100%);
+    border-radius: 10px;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.tape_reel {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100px;
+    height: 100px;
+}
+
+#reel_left {
+    left: 80px;
+}
+
+#reel_right {
+    right: 80px;
+}
+
+.reel {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, #333 20%, #666 20%, #666 25%, #333 25%, #333 30%, #555 30%);
+    border-radius: 50%;
+    border: 3px solid #222;
+    position: relative;
+}
+
+.reel::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 25px;
+    height: 25px;
+    background: #fff;
+    border-radius: 50%;
+    border: 2px solid #333;
+}
+
+.reel.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+#tape_visible {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    height: 15px;
+    overflow: hidden;
+}
+
+.tape {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        #8B4513 0%, 
+        #654321 25%, 
+        #8B4513 50%, 
+        #654321 75%, 
+        #8B4513 100%);
+    opacity: 0.6;
+}
+
+#cassette_label {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.side_a, .side_b {
+    display: none;
+    text-align: center;
+}
+
+.side_a.active, .side_b.active {
+    display: block;
+}
+
+.side_a h2, .side_b h2 {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.track_title {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+#time_display {
+    text-align: center;
+    color: #888;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+}
+
+/* Knob styles */
+.dial {
+    width: 60px;
+    height: 60px;
+}
