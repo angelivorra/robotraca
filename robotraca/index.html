@@ -1,79 +1,72 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cassette Player</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/player.css">
-</head>
-<body>
-    <div class="container">
-        <div id="cassette_player">
-            <div id="volume_control">
-                <label>VOLUME</label>
-                <input type="text" id="volume_knob" value="50" class="dial" />
-            </div>
+<html lang="en">
+    <head>
+        <title>Old School Cassette Player with HTML5 Audio</title>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> 
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+        <meta name="description" content="Old School Cassette Player with HTML5 Audio: Vintage format meets modern web tech: an HTML5 audio player with realistic controls" />
+        <meta name="keywords" content="cassette, html5, audio, player, css3, buttons, sounds, vintage, old school, javascript, jquery" />
+        <meta name="author" content="Codrops" />
+        <link rel="shortcut icon" href="../favicon.ico"> 
+        <link rel="stylesheet" type="text/css" href="css/demo.css" />
+        <link rel="stylesheet" type="text/css" href="css/style.css" />
+		<link rel="stylesheet" type="text/css" href="css/knobKnob.css" />
+        <link href='http://fonts.googleapis.com/css?family=Aldrich' rel='stylesheet' type='text/css' />
+		<script type="text/javascript" src="js/modernizr.custom.69142.js"></script> 
+    </head>
+    <body>
+        <div class="container">
+		
+			
+			<header>
+			
+				<h1><span>Robotraca</h1>
 
-            <div id="controls">
-                <div id="play" class="control" title="Play">
-                    <span>PLAY</span>
-                    <span class="icon">▶</span>
-                </div>
-                <div id="rew" class="control" title="Rewind">
-                    <span>REW</span>
-                    <span class="icon">⏪</span>
-                </div>
-                <div id="ff" class="control" title="Fast Forward">
-                    <span>FF</span>
-                    <span class="icon">⏩</span>
-                </div>
-                <div id="stop" class="control" title="Stop">
-                    <span>STOP</span>
-                    <span class="icon">▪</span>
-                </div>
-                <div id="switch_side" class="control" title="Switch Side">
-                    <span>SWITCH</span>
-                    <span class="icon">⇄</span>
-                </div>
-            </div>
+				
+				<div class="support-note"><!-- let's check browser support with modernizr -->
+					<span class="no-cssanimations">CSS animations are not supported in your browser</span>
+					<span class="no-csstransforms">CSS transforms are not supported in your browser</span>
+					<span class="no-csstransforms3d">CSS 3D transforms are not supported in your browser</span>
+					<span class="no-csstransitions">CSS transitions are not supported in your browser</span>
+					<span class="note-ie">Sorry, only modern browsers.</span>
+				</div>
+				
+			</header>
 
-            <div id="cassette">
-                <div class="tape_reel" id="reel_left">
-                    <div class="reel"></div>
-                </div>
-                <div class="tape_reel" id="reel_right">
-                    <div class="reel"></div>
-                </div>
-                <div id="tape_visible">
-                    <div class="tape"></div>
-                </div>
-                <div id="cassette_label">
-                    <div class="side_a">
-                        <h2>Side A</h2>
-                        <p class="track_title">Sartenazos desde plutón</p>
-                    </div>
-                    <div class="side_b">
-                        <h2>Side B</h2>
-                        <p class="track_title">Gobierno de la IA</p>
-                    </div>
-                </div>
-            </div>
+			<div id="vc-container" class="vc-container">
+				<div class="vc-tape-wrapper">
+					<div class="vc-tape">
+						<div class="vc-tape-back">
+							<div class="vc-tape-wheel vc-tape-wheel-left"><div></div></div>
+							<div class="vc-tape-wheel vc-tape-wheel-right"><div></div></div>
+						</div>
+						<div class="vc-tape-front vc-tape-side-a">
+							<span>A</span>
+						</div>
+						<div class="vc-tape-front vc-tape-side-b">
+							<span>B</span>
+						</div>
+					</div>
+				</div>
+				<div class="vc-loader"></div>
+			</div><!-- //vc-container -->
+		
 
-            <div id="time_display">
-                <span id="current_time">00:00</span> / <span id="total_time">00:00</span>
-            </div>
+		</div><!-- //container -->
+		
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+		<!-- KnobKnob by Martin Angelov : https://github.com/martinaglv/KnobKnob -->
+		<script src="js/transform.js"></script>
+		<script src="js/knobKnob.jquery.js"></script>
 
-            <audio id="audio_player" preload="auto">
-                <source src="audio/track1.mp3" type="audio/mpeg">
-                Your browser does not support the audio element.
-            </audio>
-        </div>
-
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="js/jquery.knob.js"></script>
-    <script src="js/player.js"></script>
-</body>
+		<script type="text/javascript" src="js/jquery.cassette.js"></script>
+		<script type="text/javascript">	
+			$(function() {
+				
+				$( '#vc-container' ).cassette();
+						
+				});
+		</script>
+    </body>
 </html>

@@ -24,6 +24,27 @@ $(document).ready(function() {
     // Show initial side
     $('.side_a').addClass('active');
 
+    // Autoplay on page load (con manejo de políticas de autoplay)
+    function tryAutoplay() {
+        var playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.then(function() {
+                // Autoplay funcionó
+                isPlaying = true;
+                $reelLeft.addClass('spinning');
+                $reelRight.addClass('spinning');
+                $('#play').css('border-color', '#667eea');
+            }).catch(function(error) {
+                // Autoplay bloqueado por el navegador
+                console.log('Autoplay prevented by browser:', error);
+                // El usuario tendrá que hacer click para reproducir
+            });
+        }
+    }
+
+    // Intentar autoplay después de un pequeño delay
+    setTimeout(tryAutoplay, 100);
+
     // Format time
     function formatTime(seconds) {
         if (isNaN(seconds)) return '00:00';
