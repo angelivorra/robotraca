@@ -55,6 +55,7 @@ You can rename files and update `js/player.js` if you prefer different names.
 ## Notes
 
 - UI inspired by the CassettePlayer demo (Tympanus) but implemented here as a lightweight custom player with a retro sci‑fi aesthetic.
+ - Uses the original CassettePlayer demo assets (adapted) from Tympanus/Codrops. Visual assets credited in the demo (cassette PSD by Mauricio Estrella). Please check the demo page for original license notes.
 - If you want help generating QR codes or deploying to GitHub Pages from this workspace, tell me and I can add a small action or generate PNGs for you.
 
 Enjoy the retro vibes!
