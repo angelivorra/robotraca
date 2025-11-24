@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Reproductor Cassette</title>
+    <link rel="stylesheet" href="css/cassette-player.css">
+</head>
+<body>
+    <div class="player-container">
+        <!-- Cassette -->
+        <div class="cassette">
+            <!-- Fondo del cassette (SVG externo) -->
+            <img class="cassette-back" src="svg/cassette-back.svg" alt="Cassette back">
+            
+            <!-- Carretes giratorios -->
+            <div class="reel-container">
+                <img class="reel reel-left" src="svg/reel.svg" alt="Left reel">
+                <img class="reel reel-right" src="svg/reel.svg" alt="Right reel">
+            </div>
+            
+            <!-- Frente del cassette (SVG externo) -->
+            <object class="cassette-front" data="svg/cassette-front.svg" type="image/svg+xml">
+                <img src="svg/cassette-front.svg" alt="Cassette front">
+            </object>
+            
+            <!-- Overlay para texto de la canción -->
+            <div class="song-display">
+                <div class="song-title">Robotraca</div>
+                <div class="song-name" id="song-name">Selecciona una canción</div>
+            </div>
+        </div>
+        
+        <!-- Controles -->
+        <div class="controls">
+            <button class="control-btn" id="prev-btn">
+                <img class="control-icon" src="svg/icon-previous.svg" alt="Previous">
+                <span>Anterior</span>
+            </button>
+            
+            <button class="control-btn" id="play-btn">
+                <img class="control-icon play-icon" src="svg/icon-play.svg" alt="Play">
+                <img class="control-icon pause-icon hidden" src="svg/icon-pause.svg" alt="Pause">
+                <span id="play-text">Play</span>
+            </button>
+            
+            <button class="control-btn" id="stop-btn">
+                <img class="control-icon" src="svg/icon-stop.svg" alt="Stop">
+                <span>Stop</span>
+            </button>
+            
+            <button class="control-btn" id="next-btn">
+                <img class="control-icon" src="svg/icon-next.svg" alt="Next">
+                <span>Siguiente</span>
+            </button>
+        </div>
+        
+        <!-- Audio element oculto -->
+        <audio id="audio-player" preload="metadata"></audio>
+    </div>
+    
+    <script src="js/cassette-player.js"></script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: manipulation;
+}
+
+.player-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Robot Head */
+.robot-head {
+    position: relative;
+    width: 90vw;
+    max-width: 600px;
+    height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.head-img {
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    object-fit: contain;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+}
+
+/* Eyes Container */
+.eyes-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 2;
+}
+
+.eye-wrapper {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    aspect-ratio: 1;
+}
+
+.eye-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Animación de rotación de ojos */
+.eye-wrapper.spinning .eye-img {
+    animation: rotateEye 2s linear infinite;
+}
+
+@keyframes rotateEye {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Song Info */
+.song-info {
+    position: absolute;
+    width: 80%;
+    text-align: center;
+    z-index: 3;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.robot-name {
+    font-size: 6vw;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 5px;
+}
+
+.song-name {
+    font-size: 4vw;
+    color: #fff;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    opacity: 0.9;
+}
+
+/* Controls */
+.controls {
+    position: fixed;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+    width: 90vw;
+    max-width: 500px;
+    padding: 0 20px;
+    z-index: 10;
+}
+
+.control-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 15px;
+    padding: 15px;
+    cursor: pointer;
+    box-shadow: 
+        0 5px 15px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.control-img {
+    width: 80%;
+    height: auto;
+    max-width: 50px;
+    object-fit: contain;
+}
+
+.play-btn {
+    flex: 1.5;
+}
+
+.play-btn .control-img {
+    max-width: 60px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Config Panel */
+.config-panel {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+}
+
+.config-toggle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+.config-toggle:active {
+    transform: scale(0.95);
+}
+
+.config-content {
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    width: 300px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.config-content h3 {
+    margin-bottom: 15px;
+    color: #333;
+    font-size: 16px;
+}
+
+.config-group {
+    margin-bottom: 15px;
+}
+
+.config-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: #555;
+}
+
+.config-group input[type="range"] {
+    width: 100%;
+}
+
+.export-config {
+    width: 100%;
+    padding: 10px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.config-output {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 5px;
+    font-size: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+    display: none;
+}
+
+/* Responsive */
+@media screen and (max-width: 480px) {
+    .robot-name {
+        font-size: 8vw;
+    }
+    
+    .song-name {
+        font-size: 5vw;
+    }
+    
+    .controls {
+        gap: 10px;
+        padding: 0 15px;
+    }
+    
+    .control-btn {
+        min-height: 60px;
+        padding: 12px;
+    }
+    
+    .control-img {
+        max-width: 40px;
+    }
+    
+    .config-content {
+        width: 250px;
+        padding: 15px;
+    }
+}
+
+@media screen and (max-height: 600px) {
+    .robot-head {
+        height: 60vh;
+    }
+    
+    .control-btn {
+        min-height: 55px;
+        padding: 10px;
+    }
+}
+
+/* Landscape */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    .player-container {
+        flex-direction: row;
+    }
+    
+    .robot-head {
+        width: 50vw;
+        height: 80vh;
+    }
+    
+    .controls {
+        position: relative;
+        flex-direction: column;
+        width: auto;
+        height: 60vh;
+    }
+}

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Robotraca Player</title>
+    <link rel="stylesheet" href="css/player-png.css">
+</head>
+<body>
+    <div class="player-container">
+        <!-- Cabeza del robot (fondo) -->
+        <div class="robot-head">
+            <img src="images/robot/cabeza.png" alt="Robot Head" class="head-img">
+            
+            <!-- Contenedor de ojos -->
+            <div class="eyes-container" id="eyesContainer">
+                <!-- Ojo izquierdo -->
+                <div class="eye-wrapper left-eye" id="leftEye">
+                    <img src="images/robot/ojo_izquierdo.png" alt="Left Eye" class="eye-img">
+                </div>
+                
+                <!-- Ojo derecho -->
+                <div class="eye-wrapper right-eye" id="rightEye">
+                    <img src="images/robot/ojo_derecho.png" alt="Right Eye" class="eye-img">
+                </div>
+            </div>
+            
+            <!-- Display de información de la canción -->
+            <div class="song-info" id="songInfo">
+                <div class="robot-name">Robotraca</div>
+                <div class="song-name" id="songName">Selecciona una canción</div>
+            </div>
+        </div>
+        
+        <!-- Controles -->
+        <div class="controls" id="controls">
+            <button class="control-btn" id="prevBtn">
+                <img src="images/robot/prev.png" alt="Previous" class="control-img">
+            </button>
+            
+            <button class="control-btn play-btn" id="playBtn">
+                <img src="images/robot/play.png" alt="Play" class="control-img play-img">
+                <img src="images/robot/stop.png" alt="Stop" class="control-img stop-img hidden">
+            </button>
+            
+            <button class="control-btn" id="stopBtn">
+                <img src="images/robot/stop.png" alt="Stop" class="control-img">
+            </button>
+            
+            <button class="control-btn" id="nextBtn">
+                <img src="images/robot/next.png" alt="Next" class="control-img">
+            </button>
+        </div>
+        
+        <!-- Audio element -->
+        <audio id="audioPlayer" preload="metadata"></audio>
+    </div>
+    
+    <!-- Panel de configuración (para desarrollo) -->
+    <div class="config-panel" id="configPanel">
+        <button class="config-toggle" id="configToggle">⚙️</button>
+        <div class="config-content hidden" id="configContent">
+            <h3>Configuración de Posiciones</h3>
+            
+            <div class="config-group">
+                <label>Distancia entre ojos: <span id="eyeDistanceValue">40</span>%</label>
+                <input type="range" id="eyeDistance" min="20" max="80" value="40" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Posición vertical ojos: <span id="eyeVerticalValue">40</span>%</label>
+                <input type="range" id="eyeVertical" min="0" max="80" value="40" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Posición vertical canción: <span id="songVerticalValue">70</span>%</label>
+                <input type="range" id="songVertical" min="50" max="90" value="70" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Posición vertical controles: <span id="controlsVerticalValue">85</span>%</label>
+                <input type="range" id="controlsVertical" min="60" max="100" value="85" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño ojo izquierdo: <span id="leftEyeSizeValue">15</span>%</label>
+                <input type="range" id="leftEyeSize" min="5" max="30" value="15" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño ojo derecho: <span id="rightEyeSizeValue">15</span>%</label>
+                <input type="range" id="rightEyeSize" min="5" max="30" value="15" step="1">
+            </div>
+            
+            <button class="export-config" id="exportConfig">Exportar Config</button>
+            <pre class="config-output" id="configOutput"></pre>
+        </div>
+    </div>
+    
+    <script src="js/player-png.js"></script>
+</body>
+</html>
