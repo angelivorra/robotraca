@@ -3,10 +3,16 @@
     width: 100%;
     max-width: 700px;
     margin: 0 auto;
-    background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+    background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="%23222"/><rect width="1" height="1" fill="%23333"/></svg>'),
+        linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+    background-size: 4px 4px, 100% 100%;
     border-radius: 15px;
     padding: 30px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    box-shadow: 
+        0 20px 60px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.1);
+    border: 1px solid #000;
 }
 
 #volume_control {
@@ -38,23 +44,43 @@
     align-items: center;
     gap: 5px;
     padding: 15px 20px;
-    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
-    border: 2px solid #444;
+    background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="%23333"/><rect width="1" height="1" fill="%23444"/></svg>'),
+        radial-gradient(ellipse at top, #4a4a4a 0%, #2a2a2a 50%, #1a1a1a 100%);
+    background-size: 2px 2px, 100% 100%;
+    border: 2px solid #1a1a1a;
+    border-top-color: #555;
+    border-left-color: #444;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
     user-select: none;
+    box-shadow: 
+        0 3px 8px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
 .control:hover {
-    background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
-    border-color: #555;
+    background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="%23444"/><rect width="1" height="1" fill="%23555"/></svg>'),
+        radial-gradient(ellipse at top, #5a5a5a 0%, #3a3a3a 50%, #2a2a2a 100%);
+    background-size: 2px 2px, 100% 100%;
+    border-top-color: #666;
     transform: translateY(-2px);
+    box-shadow: 
+        0 5px 12px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .control:active {
     transform: translateY(0);
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: 
+        inset 0 2px 8px rgba(0,0,0,0.6),
+        inset 0 -1px 0 rgba(255,255,255,0.05);
+    background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="%23222"/><rect width="1" height="1" fill="%23333"/></svg>'),
+        radial-gradient(ellipse at top, #3a3a3a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    background-size: 2px 2px, 100% 100%;
 }
 
 .control span:first-child {
@@ -73,11 +99,19 @@
     position: relative;
     width: 100%;
     height: 300px;
-    background: linear-gradient(180deg, #f5f5f5 0%, #e0e0e0 100%);
+    background: 
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23f0f0f0"/><stop offset="100%" style="stop-color:%23e5e5e5"/></linearGradient></defs><rect width="100" height="100" fill="url(%23g1)"/><circle cx="10" cy="10" r="0.5" fill="%23ddd"/><circle cx="30" cy="20" r="0.5" fill="%23ddd"/><circle cx="50" cy="15" r="0.5" fill="%23ddd"/><circle cx="70" cy="25" r="0.5" fill="%23ddd"/><circle cx="90" cy="10" r="0.5" fill="%23ddd"/></svg>'),
+        linear-gradient(135deg, #f8f8f8 0%, #ececec 50%, #e0e0e0 100%);
+    background-size: 100px 100px, 100% 100%;
     border-radius: 10px;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+    box-shadow: 
+        inset 0 2px 10px rgba(0,0,0,0.15),
+        inset 0 -2px 10px rgba(255,255,255,0.5),
+        0 5px 15px rgba(0,0,0,0.3);
     margin-bottom: 20px;
     overflow: hidden;
+    border: 1px solid #ccc;
+    border-bottom-color: #fff;
 }
 
 .tape_reel {
@@ -99,10 +133,17 @@
 .reel {
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle, #333 20%, #666 20%, #666 25%, #333 25%, #333 30%, #555 30%);
+    background: 
+        radial-gradient(circle at 30% 30%, rgba(100,100,100,0.3) 0%, transparent 50%),
+        conic-gradient(from 0deg, #1a1a1a 0deg, #333 30deg, #1a1a1a 60deg, #333 90deg, #1a1a1a 120deg, #333 150deg, #1a1a1a 180deg, #333 210deg, #1a1a1a 240deg, #333 270deg, #1a1a1a 300deg, #333 330deg, #1a1a1a 360deg),
+        radial-gradient(circle, #2a2a2a 25%, #444 30%, #333 40%, #1a1a1a 50%);
     border-radius: 50%;
-    border: 3px solid #222;
+    border: 3px solid #0a0a0a;
     position: relative;
+    box-shadow: 
+        inset 0 2px 8px rgba(0,0,0,0.8),
+        inset 0 -2px 8px rgba(255,255,255,0.1),
+        0 3px 10px rgba(0,0,0,0.5);
 }
 
 .reel::before {
@@ -113,9 +154,26 @@
     transform: translate(-50%, -50%);
     width: 25px;
     height: 25px;
-    background: #fff;
+    background: 
+        radial-gradient(circle at 30% 30%, #fff 0%, #f0f0f0 30%, #ddd 70%, #ccc 100%);
     border-radius: 50%;
     border: 2px solid #333;
+    box-shadow: 
+        inset 0 1px 3px rgba(0,0,0,0.3),
+        0 1px 2px rgba(255,255,255,0.8);
+}
+
+.reel::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: #666;
+    border-radius: 50%;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
 }
 
 .reel.spinning {
