@@ -167,22 +167,62 @@ function onCastConnected() {
             mobileLog.info('App ID in use: ' + appId);
             const isDefault = appId === chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
             mobileLog.info('Is Default Receiver? ' + isDefault);
+            
+            // Escuchar cambios en el estado del media
+            session.addUpdateListener(() => {
+                const mediaSession = session.getMediaSession();
+                if (mediaSession) {
+                    const playerState = mediaSession.playerState;
+                    
+                    // Sincronizar estado local con Cast
+                    if (playerState === chrome.cast.media.PlayerState.PLAYING) {
+                        if (!isPlaying) {
+                            isPlaying = true;
+                            updatePlayButton();
+                        }
+                    } else if (playerState === chrome.cast.media.PlayerState.PAUSED) {
+                        if (isPlaying) {
+                            isPlaying = false;
+                            updatePlayButton();
+                        }
+                    }
+                }
+            });
         }
     } catch (e) {
         mobileLog.error('Error getting session info: ' + e.message);
     }
     
-    // Si hay música reproduciéndose, enviarla al Chromecast
-    if (isPlaying && currentSongIndex >= 0) {
+    // Pausar reproducción local cuando conectamos a Cast
+    if (audio && !audio.paused) {
+        mobileLog.info('Pausing local playback...');
+        audio.pause();
+    }
+    
+    // Si hay música seleccionada, enviarla al Chromecast
+    if (currentSongIndex >= 0) {
         mobileLog.info('Sending current song to Chromecast...');
         castCurrentSong();
     } else {
-        mobileLog.info('No song playing. Play a song to cast it.');
+        mobileLog.info('No song selected.');
     }
 }
 
 function onCastDisconnected() {
-    console.log('Desconectado de Chromecast');
+    mobileLog.info('Disconnected from Chromecast');
+    
+    // Si había una canción sonando en Cast, reanudar reproducción local
+    if (isPlaying && currentSongIndex >= 0) {
+        mobileLog.info('Resuming local playback...');
+        // Pequeño delay para evitar problemas
+        setTimeout(() => {
+            if (audio) {
+                audio.play().catch(e => {
+                    mobileLog.error('Cannot resume: ' + e.message);
+                });
+            }
+        }, 500);
+    }
 }
 
 function castCurrentSong() {
@@ -349,39 +389,55 @@ function setupCastIntegration() {
     const originalPreviousSong = window.previousSong;
     
     window.play = function() {
-        originalPlay();
         if (isCasting) {
+            // Si estamos en Cast, solo controlar el Chromecast
+            mobileLog.info('Play command -> Chromecast');
             castCurrentSong();
+        } else {
+            // Si no, reproducir localmente
+            originalPlay();
         }
     };
     
     window.pause = function() {
-        originalPause();
         if (isCasting && castSession) {
+            // Si estamos en Cast, pausar el Chromecast
+            mobileLog.info('Pause command -> Chromecast');
             const mediaSession = castSession.getMediaSession();
             if (mediaSession) {
                 mediaSession.pause(new chrome.cast.media.PauseRequest());
             }
+        } else {
+            // Si no, pausar localmente
+            originalPause();
         }
     };
     
     window.stop = function() {
-        originalStop();
         if (isCasting && castSession) {
+            // Si estamos en Cast, detener y desconectar
+            mobileLog.info('Stop command -> Ending Cast session');
             castSession.endSession(true);
+        } else {
+            // Si no, detener localmente
+            originalStop();
         }
     };
     
     window.nextSong = function() {
         originalNextSong();
-        if (isCasting && isPlaying) {
+        if (isCasting) {
+            // Si estamos en Cast, enviar nueva canción
+            mobileLog.info('Next song -> Chromecast');
             setTimeout(() => castCurrentSong(), 100);
         }
     };
     
     window.previousSong = function() {
         originalPreviousSong();
-        if (isCasting && isPlaying) {
+        if (isCasting) {
+            // Si estamos en Cast, enviar nueva canción
+            mobileLog.info('Previous song -> Chromecast');
             setTimeout(() => castCurrentSong(), 100);
         }
     };
