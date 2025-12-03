@@ -6,6 +6,17 @@ let currentSongName = 'Esperando canción...';
 let visualizerBars = [];
 let isPlaying = false;
 
+// Debug visual en pantalla
+function debugLog(message) {
+    console.log(message);
+    const songNameEl = document.getElementById('songName');
+    if (songNameEl) {
+        songNameEl.textContent = message;
+        songNameEl.style.fontSize = '1.5rem';
+        songNameEl.style.color = '#0ff';
+    }
+}
+
 // Inicializar visualizador
 function initVisualizer() {
     const barsContainer = document.getElementById('visualizerBars');
@@ -47,35 +58,52 @@ function updateSongName(name) {
 
 // Inicializar Cast Receiver
 function initializeCastReceiver() {
-    console.log('Initializing Cast Receiver...');
+    debugLog('Inicializando receiver...');
     
     if (!cast || !cast.framework) {
-        console.error('Cast SDK not loaded!');
+        debugLog('ERROR: Cast SDK no cargado');
         return;
     }
     
-    const context = cast.framework.CastReceiverContext.getInstance();
-    const playerManager = context.getPlayerManager();
+    debugLog('SDK cargado OK');
     
-    // Event listeners
-    playerManager.addEventListener(cast.framework.events.EventType.LOAD, (event) => {
-        console.log('Media loaded:', event.media);
-        if (event.media && event.media.metadata && event.media.metadata.title) {
-            updateSongName(event.media.metadata.title);
-        }
-    });
-    
-    playerManager.addEventListener(cast.framework.events.EventType.PLAYER_STATE_CHANGED, (event) => {
-        console.log('Player state:', event.playerState);
-        isPlaying = (event.playerState === cast.framework.messages.PlayerState.PLAYING);
-    });
-    
-    // Opciones e inicio
-    const options = new cast.framework.CastReceiverOptions();
-    options.disableIdleTimeout = false;
-    
-    context.start(options);
-    console.log('Cast Receiver started!');
+    try {
+        const context = cast.framework.CastReceiverContext.getInstance();
+        const playerManager = context.getPlayerManager();
+        
+        debugLog('Context y PlayerManager OK');
+        
+        // Event listeners
+        playerManager.addEventListener(cast.framework.events.EventType.LOAD, (event) => {
+            debugLog('Media cargada: ' + (event.media?.metadata?.title || 'sin título'));
+            if (event.media && event.media.metadata && event.media.metadata.title) {
+                updateSongName(event.media.metadata.title);
+            }
+        });
+        
+        playerManager.addEventListener(cast.framework.events.EventType.PLAYER_STATE_CHANGED, (event) => {
+            debugLog('Estado: ' + event.playerState);
+            isPlaying = (event.playerState === cast.framework.messages.PlayerState.PLAYING);
+        });
+        
+        debugLog('Listeners configurados');
+        
+        // Opciones e inicio
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = false;
+        
+        debugLog('Iniciando receiver...');
+        context.start(options);
+        debugLog('RECEIVER INICIADO OK!');
+        
+        // Después de 2 segundos, volver a mostrar "Esperando canción..."
+        setTimeout(() => {
+            updateSongName(currentSongName);
+        }, 2000);
+        
+    } catch (error) {
+        debugLog('ERROR: ' + error.message);
+    }
 }
 
 // Inicializar todo
