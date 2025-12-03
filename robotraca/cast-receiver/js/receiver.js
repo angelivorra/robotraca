@@ -50,10 +50,10 @@ console.error = function(...args) {
 // Esperar a que el DOM esté listo antes de loguear
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        debugLog('✓ Receiver script v12 - audio debug enhanced', 'success');
+        debugLog('✓ Receiver script v13 - mediaElement configured', 'success');
     });
 } else {
-    debugLog('✓ Receiver script v12 - audio debug enhanced', 'success');
+    debugLog('✓ Receiver script v13 - mediaElement configured', 'success');
 }
 
 // Inicializar visualizador
@@ -126,15 +126,25 @@ function initializeCastReceiver() {
     debugLog('SDK cargado OK', 'success');
     
     try {
+        // Obtener referencia al elemento de audio ANTES de inicializar el contexto
+        const playerElement = document.getElementById('player');
+        if (!playerElement) {
+            debugLog('ERROR: No se encuentra elemento <audio>', 'error');
+            return;
+        }
+        debugLog('Elemento <audio> encontrado', 'success');
+        
+        // Opciones del receiver con el elemento de medios especificado
+        const options = new cast.framework.CastReceiverOptions();
+        options.disableIdleTimeout = false;
+        options.mediaElement = playerElement; // ¡CLAVE! Especificar el elemento de audio
+        
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         
-        debugLog('Context y PlayerManager OK', 'success');
+        debugLog('Context y PlayerManager OK con mediaElement', 'success');
         
-        // Obtener referencia al elemento de audio
-        const playerElement = document.getElementById('player');
         if (playerElement) {
-            debugLog('Elemento <audio> encontrado', 'success');
             
             // Asegurar que el volumen está al máximo
             playerElement.volume = 1.0;
@@ -210,10 +220,7 @@ function initializeCastReceiver() {
         
         debugLog('Listeners configurados', 'success');
         
-        // Opciones e inicio
-        const options = new cast.framework.CastReceiverOptions();
-        options.disableIdleTimeout = false;
-        
+        // Iniciar el contexto con las opciones ya configuradas arriba
         debugLog('Iniciando receiver...', 'info');
         context.start(options);
         debugLog('✓ RECEIVER INICIADO OK!', 'success');
