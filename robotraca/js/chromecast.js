@@ -158,19 +158,26 @@ function onCastStateChanged(event) {
 
 function onCastConnected() {
     mobileLog.success('Connected to Chromecast!');
-    const appId = castContext.getSessionContext()?.applicationId;
-    mobileLog.info('App ID in use: ' + appId);
-    const isDefault = appId === chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
-    mobileLog.info('Is Default Receiver? ' + isDefault);
     
-    // Crear visualización personalizada para TV
-    loadCastVisualizer();
+    // Obtener información de la sesión correctamente
+    try {
+        const session = castContext.getCurrentSession();
+        if (session) {
+            const appId = session.getApplicationMetadata()?.applicationId;
+            mobileLog.info('App ID in use: ' + appId);
+            const isDefault = appId === chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
+            mobileLog.info('Is Default Receiver? ' + isDefault);
+        }
+    } catch (e) {
+        mobileLog.error('Error getting session info: ' + e.message);
+    }
     
     // Si hay música reproduciéndose, enviarla al Chromecast
     if (isPlaying && currentSongIndex >= 0) {
+        mobileLog.info('Sending current song to Chromecast...');
         castCurrentSong();
     } else {
-        console.warn('No hay canción reproduciéndose. Carga una canción primero.');
+        mobileLog.info('No song playing. Play a song to cast it.');
     }
 }
 
@@ -180,17 +187,14 @@ function onCastDisconnected() {
 
 function castCurrentSong() {
     if (!castSession || currentSongIndex < 0 || currentSongIndex >= songs.length) {
-        console.warn('No se puede enviar canción:', { 
-            hasSesion: !!castSession, 
-            songIndex: currentSongIndex, 
-            totalSongs: songs.length 
-        });
+        mobileLog.error('Cannot send song: session=' + !!castSession + ' idx=' + currentSongIndex);
         return;
     }
     
     const song = songs[currentSongIndex];
     const audioUrl = getAbsoluteUrl(song.path);
-    console.log('Enviando audio al Chromecast:', audioUrl);
+    mobileLog.info('Sending to Cast: ' + song.name);
+    mobileLog.info('URL: ' + audioUrl);
     
     const mediaInfo = new chrome.cast.media.MediaInfo(
         audioUrl,
@@ -220,10 +224,10 @@ function castCurrentSong() {
     
     castSession.loadMedia(request).then(
         function() {
-            console.log('Media cargada en Chromecast con datos personalizados');
+            mobileLog.success('Media loaded on Chromecast!');
         },
         function(errorCode) {
-            console.error('Error al cargar media:', errorCode);
+            mobileLog.error('Load media error: ' + errorCode);
         }
     );
 }
