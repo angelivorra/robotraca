@@ -24,10 +24,27 @@ function initializeCastApi() {
         autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
     });
     
-    // Mostrar el botón de cast
+    // Mostrar el botón de cast y agregar listener
     const castBtn = document.getElementById('castBtn');
     if (castBtn) {
         castBtn.classList.remove('hidden');
+        
+        // Agregar click listener manual por si el SDK no responde
+        castBtn.addEventListener('click', function(e) {
+            console.log('Cast button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Intentar abrir diálogo de Cast
+            if (castContext) {
+                try {
+                    castContext.requestSession();
+                    console.log('Requesting cast session...');
+                } catch (error) {
+                    console.error('Error requesting cast session:', error);
+                }
+            }
+        });
     }
     
     // Escuchar cambios en el estado de la sesión
