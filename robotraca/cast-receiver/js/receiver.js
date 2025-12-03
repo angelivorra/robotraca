@@ -1,6 +1,15 @@
 // Google Cast Receiver para Robotraca
+console.log('Receiver script loaded');
+
+// Verificar que el SDK esté disponible
+if (!cast || !cast.framework) {
+    console.error('Cast SDK not loaded!');
+}
+
 const context = cast.framework.CastReceiverContext.getInstance();
 const playerManager = context.getPlayerManager();
+
+console.log('Cast context and player manager obtained');
 
 // Variables globales
 let currentSongName = 'Esperando canción...';
@@ -141,9 +150,17 @@ const options = new cast.framework.CastReceiverOptions();
 options.disableIdleTimeout = false;
 options.maxInactivity = 3600; // 1 hora
 
+// Configurar opciones de soporte de medios
+options.supportedCommands = cast.framework.messages.Command.ALL_BASIC_MEDIA;
+
 // Inicializar receiver
 console.log('Inicializando Cast Receiver...');
-context.start(options);
+try {
+    context.start(options);
+    console.log('Cast Receiver started successfully');
+} catch (error) {
+    console.error('Error starting receiver:', error);
+}
 
 // Inicializar visualizador cuando el DOM esté listo
 if (document.readyState === 'loading') {
