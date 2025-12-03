@@ -50,10 +50,10 @@ console.error = function(...args) {
 // Esperar a que el DOM esté listo antes de loguear
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        debugLog('✓ Receiver script v13 - mediaElement configured', 'success');
+        debugLog('✓ Receiver v14 ready', 'success');
     });
 } else {
-    debugLog('✓ Receiver script v13 - mediaElement configured', 'success');
+    debugLog('✓ Receiver v14 ready', 'success');
 }
 
 // Inicializar visualizador
