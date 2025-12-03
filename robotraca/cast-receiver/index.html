@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robotraca Cast Receiver</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+</head>
+<body>
+    <div class="background-container">
+        <video autoplay loop muted playsinline class="background-video">
+            <source src="images/robot/background.mp4" type="video/mp4">
+        </video>
+    </div>
+    
+    <div class="content-container">
+        <!-- Header con nombre -->
+        <header class="header">
+            <h1 class="robotraca-title">ROBOTRACA</h1>
+        </header>
+        
+        <!-- Contenedor principal dividido en dos -->
+        <div class="main-content">
+            <!-- Lado izquierdo: Robot con ojos giratorios -->
+            <div class="left-side">
+                <div class="robot-container">
+                    <img src="images/robot/cabeza.png" alt="Robot Head" class="robot-head">
+                    <div class="eyes-container">
+                        <div class="eye left-eye">
+                            <img src="images/robot/ojo_izquierdo.png" alt="Left Eye" class="eye-img spinning">
+                        </div>
+                        <div class="eye right-eye">
+                            <img src="images/robot/ojo_derecho.png" alt="Right Eye" class="eye-img spinning">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lado derecho: Visualizador de audio -->
+            <div class="right-side">
+                <div class="visualizer-container">
+                    <canvas id="visualizer" class="visualizer-canvas"></canvas>
+                    <div class="visualizer-bars" id="visualizerBars"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer con nombre de canción -->
+        <footer class="footer">
+            <div class="song-info">
+                <div class="now-playing">REPRODUCIENDO AHORA</div>
+                <div class="song-name" id="songName">Esperando canción...</div>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="js/receiver.js"></script>
+</body>
+</html>

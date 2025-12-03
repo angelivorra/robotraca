@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Robotraca Player</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/player-png.css">
+    <title>Robotraca - Próximamente</title>
     <style>
         @font-face {
             font-family: 'CustomFont';
@@ -15,115 +13,171 @@
             font-weight: normal;
             font-style: normal;
         }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'CustomFont', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #2e0557 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+        
+        .robot-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+        
+        .robot-head {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 0 30px rgba(0, 255, 255, 0.3));
+        }
+        
+        .eyes-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .eye-wrapper {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            aspect-ratio: 1;
+        }
+        
+        .eye-wrapper.left-eye {
+            left: 30%;
+            top: 35%;
+            width: 12%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .eye-wrapper.right-eye {
+            left: 50%;
+            top: 35%;
+            width: 15%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .eye-img {
+            width: 100%;
+            height: auto;
+            animation: spinEye 3s linear infinite;
+        }
+        
+        @keyframes spinEye {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .title {
+            font-size: 80px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.8),
+                0 0 20px rgba(0, 255, 255, 0.6),
+                0 0 30px rgba(0, 255, 255, 0.4);
+            letter-spacing: 15px;
+            margin-bottom: 30px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 
+                    0 0 10px rgba(0, 255, 255, 0.8),
+                    0 0 20px rgba(0, 255, 255, 0.6),
+                    0 0 30px rgba(0, 255, 255, 0.4);
+            }
+            to {
+                text-shadow: 
+                    0 0 20px rgba(0, 255, 255, 1),
+                    0 0 30px rgba(0, 255, 255, 0.8),
+                    0 0 40px rgba(0, 255, 255, 0.6),
+                    0 0 50px rgba(0, 255, 255, 0.4);
+            }
+        }
+        
+        .subtitle {
+            font-size: 40px;
+            color: #ffffff;
+            text-shadow: 
+                0 0 10px rgba(255, 255, 255, 0.5),
+                0 0 20px rgba(0, 255, 255, 0.3);
+            letter-spacing: 8px;
+            opacity: 0.9;
+        }
+        
+        @media (max-width: 768px) {
+            .title {
+                font-size: 60px;
+                letter-spacing: 10px;
+            }
+            
+            .subtitle {
+                font-size: 30px;
+                letter-spacing: 5px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .title {
+                font-size: 40px;
+                letter-spacing: 8px;
+            }
+            
+            .subtitle {
+                font-size: 24px;
+                letter-spacing: 4px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="player-container">
-        <!-- Cabeza del robot (fondo) -->
-        <div class="robot-head">
-            <img src="images/robot/cabeza.png" alt="Robot Head" class="head-img">
+    <div class="container">
+        <div class="robot-container">
+            <img src="images/robot/cabeza.png" alt="Robot Head" class="robot-head">
             
-            <!-- Contenedor de ojos -->
-            <div class="eyes-container" id="eyesContainer">
-                <!-- Ojo izquierdo -->
-                <div class="eye-wrapper left-eye" id="leftEye">
+            <div class="eyes-container">
+                <div class="eye-wrapper left-eye">
                     <img src="images/robot/ojo_izquierdo.png" alt="Left Eye" class="eye-img">
                 </div>
                 
-                <!-- Ojo derecho -->
-                <div class="eye-wrapper right-eye" id="rightEye">
+                <div class="eye-wrapper right-eye">
                     <img src="images/robot/ojo_derecho.png" alt="Right Eye" class="eye-img">
                 </div>
             </div>
-            
-            <!-- Display de información de la canción -->
-            <div class="song-info" id="songInfo">
-                <div class="robot-name">Robotraca</div>
-                <div class="song-name" id="songName">Pulse Play</div>
-            </div>
-            
-            <!-- Controles -->
-            <div class="controls" id="controls">
-                <button class="control-btn" id="prevBtn">
-                    <i class="fas fa-backward"></i>
-                </button>
-                
-                <button class="control-btn play-btn" id="playBtn">
-                    <i class="fas fa-play play-icon"></i>
-                    <i class="fas fa-pause pause-icon hidden"></i>
-                </button>
-                
-                <button class="control-btn" id="nextBtn">
-                    <i class="fas fa-forward"></i>
-                </button>
-            </div>
         </div>
         
-        <!-- Audio element -->
-        <audio id="audioPlayer" preload="metadata"></audio>
+        <h1 class="title">ROBOTRACA</h1>
+        <p class="subtitle">PRÓXIMAMENTE</p>
     </div>
-    
-    <!-- Panel de configuración (para desarrollo) -->
-    <div class="config-panel" id="configPanel">
-        <button class="config-toggle" id="configToggle">⚙️</button>
-        <div class="config-content hidden" id="configContent">
-            <h3>Configuración de Posiciones</h3>
-            
-            <div class="config-group">
-                <label>Distancia entre ojos: <span id="eyeDistanceValue">40</span>%</label>
-                <input type="range" id="eyeDistance" min="20" max="80" value="40" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Posición vertical ojos: <span id="eyeVerticalValue">40</span>%</label>
-                <input type="range" id="eyeVertical" min="0" max="80" value="40" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Posición vertical canción: <span id="songVerticalValue">70</span>%</label>
-                <input type="range" id="songVertical" min="0" max="90" value="70" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Tamaño texto Robotraca: <span id="robotNameSizeValue">6</span>% cabeza</label>
-                <input type="range" id="robotNameSize" min="1" max="12" value="6" step="0.5">
-            </div>
-            
-            <div class="config-group">
-                <label>Tamaño texto canción: <span id="songNameSizeValue">4</span>% cabeza</label>
-                <input type="range" id="songNameSize" min="0.5" max="10" value="4" step="0.5">
-            </div>
-            
-            <div class="config-group">
-                <label>Posición vertical controles: <span id="controlsVerticalValue">85</span>%</label>
-                <input type="range" id="controlsVertical" min="30" max="100" value="85" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Tamaño ojo izquierdo: <span id="leftEyeSizeValue">15</span>%</label>
-                <input type="range" id="leftEyeSize" min="5" max="30" value="15" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Tamaño ojo derecho: <span id="rightEyeSizeValue">15</span>%</label>
-                <input type="range" id="rightEyeSize" min="5" max="30" value="15" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Tamaño de botones: <span id="buttonSizeValue">12</span>% cabeza</label>
-                <input type="range" id="buttonSize" min="5" max="25" value="12" step="1">
-            </div>
-            
-            <div class="config-group">
-                <label>Ancho de botones: <span id="buttonWidthValue">60</span>%</label>
-                <input type="range" id="buttonWidth" min="20" max="100" value="60" step="5">
-            </div>
-            
-            <button class="export-config" id="exportConfig">Exportar Config</button>
-            <pre class="config-output" id="configOutput"></pre>
-        </div>
-    </div>
-    
-    <script src="js/player-png.js"></script>
 </body>
 </html>
