@@ -50,10 +50,10 @@ console.error = function(...args) {
 // Esperar a que el DOM esté listo antes de loguear
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        debugLog('✓ Receiver script v11 - audio element added', 'success');
+        debugLog('✓ Receiver script v12 - audio debug enhanced', 'success');
     });
 } else {
-    debugLog('✓ Receiver script v11 - audio element added', 'success');
+    debugLog('✓ Receiver script v12 - audio debug enhanced', 'success');
 }
 
 // Inicializar visualizador
@@ -135,6 +135,28 @@ function initializeCastReceiver() {
         const playerElement = document.getElementById('player');
         if (playerElement) {
             debugLog('Elemento <audio> encontrado', 'success');
+            
+            // Asegurar que el volumen está al máximo
+            playerElement.volume = 1.0;
+            playerElement.muted = false;
+            debugLog('Volume: ' + playerElement.volume + ', Muted: ' + playerElement.muted, 'info');
+            
+            // Listeners del elemento HTML5 para diagnóstico
+            playerElement.addEventListener('loadedmetadata', () => {
+                debugLog('Audio metadata loaded', 'success');
+            });
+            
+            playerElement.addEventListener('canplay', () => {
+                debugLog('Audio can play - duration: ' + Math.round(playerElement.duration) + 's', 'success');
+            });
+            
+            playerElement.addEventListener('volumechange', () => {
+                debugLog('Volume changed: ' + playerElement.volume + ', muted: ' + playerElement.muted, 'info');
+            });
+            
+            playerElement.addEventListener('playing', () => {
+                debugLog('HTML5 Audio PLAYING - currentTime: ' + Math.round(playerElement.currentTime), 'success');
+            });
         } else {
             debugLog('ERROR: No se encuentra elemento <audio>', 'error');
         }
@@ -195,6 +217,17 @@ function initializeCastReceiver() {
         debugLog('Iniciando receiver...', 'info');
         context.start(options);
         debugLog('✓ RECEIVER INICIADO OK!', 'success');
+        
+        // Verificar y reportar volumen del sistema
+        setTimeout(() => {
+            const playerElement = document.getElementById('player');
+            if (playerElement) {
+                debugLog('Check audio: volume=' + playerElement.volume + 
+                        ', muted=' + playerElement.muted + 
+                        ', paused=' + playerElement.paused + 
+                        ', src=' + (playerElement.src ? 'YES' : 'NO'), 'info');
+            }
+        }, 1000);
         
         // Después de 2 segundos, volver a mostrar "Esperando canción..."
         setTimeout(() => {
