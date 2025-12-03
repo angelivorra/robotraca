@@ -15,8 +15,8 @@ function initializeCastApi() {
     
     // TODO: Reemplazar con tu Application ID de Google Cast Developer Console
     // Por ahora usa el default, pero cambiarás esto cuando registres tu app
-    const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
-    // const CUSTOM_RECEIVER_APP_ID = 'TU_APP_ID_AQUI'; // Descomenta cuando tengas tu ID
+    // const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
+    const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F'; // Descomenta cuando tengas tu ID
     
     // Configurar opciones
     castContext.setOptions({
@@ -66,6 +66,8 @@ function onCastStateChanged(event) {
 
 function onCastConnected() {
     console.log('Conectado a Chromecast');
+    console.log('Application ID en uso:', castContext.getSessionContext()?.applicationId);
+    console.log('¿Es Default Receiver?', castContext.getSessionContext()?.applicationId === chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID);
     
     // Crear visualización personalizada para TV
     loadCastVisualizer();
@@ -73,6 +75,8 @@ function onCastConnected() {
     // Si hay música reproduciéndose, enviarla al Chromecast
     if (isPlaying && currentSongIndex >= 0) {
         castCurrentSong();
+    } else {
+        console.warn('No hay canción reproduciéndose. Carga una canción primero.');
     }
 }
 
@@ -82,12 +86,20 @@ function onCastDisconnected() {
 
 function castCurrentSong() {
     if (!castSession || currentSongIndex < 0 || currentSongIndex >= songs.length) {
+        console.warn('No se puede enviar canción:', { 
+            hasSesion: !!castSession, 
+            songIndex: currentSongIndex, 
+            totalSongs: songs.length 
+        });
         return;
     }
     
     const song = songs[currentSongIndex];
+    const audioUrl = getAbsoluteUrl(song.path);
+    console.log('Enviando audio al Chromecast:', audioUrl);
+    
     const mediaInfo = new chrome.cast.media.MediaInfo(
-        getAbsoluteUrl(song.path),
+        audioUrl,
         'audio/mp3'
     );
     
