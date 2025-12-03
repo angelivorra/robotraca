@@ -178,12 +178,12 @@ function onCastConnected() {
                     if (playerState === chrome.cast.media.PlayerState.PLAYING) {
                         if (!isPlaying) {
                             isPlaying = true;
-                            updatePlayButton();
+                            updatePlayButton(true);
                         }
                     } else if (playerState === chrome.cast.media.PlayerState.PAUSED) {
                         if (isPlaying) {
                             isPlaying = false;
-                            updatePlayButton();
+                            updatePlayButton(false);
                         }
                     }
                 }
@@ -265,6 +265,9 @@ function castCurrentSong() {
     castSession.loadMedia(request).then(
         function() {
             mobileLog.success('Media loaded on Chromecast!');
+            // Actualizar estado local para que el botón cambie
+            isPlaying = true;
+            updatePlayButton(true);
         },
         function(errorCode) {
             mobileLog.error('Load media error: ' + errorCode);
@@ -397,7 +400,11 @@ function setupCastIntegration() {
                 // Si hay media pausada, reanudar
                 mobileLog.info('Resuming Cast playback...');
                 mediaSession.play(new chrome.cast.media.PlayRequest(),
-                    () => mobileLog.success('Resumed'),
+                    () => {
+                        mobileLog.success('Resumed');
+                        isPlaying = true;
+                        updatePlayButton(true);
+                    },
                     (error) => mobileLog.error('Resume error: ' + error.code)
                 );
             } else {
@@ -417,7 +424,11 @@ function setupCastIntegration() {
             const mediaSession = castSession.getMediaSession();
             if (mediaSession) {
                 mediaSession.pause(new chrome.cast.media.PauseRequest(),
-                    () => mobileLog.success('Paused on Cast'),
+                    () => {
+                        mobileLog.success('Paused on Cast');
+                        isPlaying = false;
+                        updatePlayButton(false);
+                    },
                     (error) => mobileLog.error('Pause error: ' + error.code)
                 );
             } else {
