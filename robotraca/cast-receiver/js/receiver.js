@@ -1,16 +1,6 @@
 // Google Cast Receiver para Robotraca
 console.log('Receiver script loaded');
 
-// Verificar que el SDK esté disponible
-if (!cast || !cast.framework) {
-    console.error('Cast SDK not loaded!');
-}
-
-const context = cast.framework.CastReceiverContext.getInstance();
-const playerManager = context.getPlayerManager();
-
-console.log('Cast context and player manager obtained');
-
 // Variables globales
 let currentSongName = 'Esperando canción...';
 let visualizerBars = [];
@@ -21,7 +11,6 @@ function initVisualizer() {
     const barsContainer = document.getElementById('visualizerBars');
     const numBars = 32;
     
-    // Crear barras
     for (let i = 0; i < numBars; i++) {
         const bar = document.createElement('div');
         bar.className = 'bar';
@@ -30,27 +19,19 @@ function initVisualizer() {
         visualizerBars.push(bar);
     }
     
-    // Animar barras
     animateVisualizer();
 }
 
 // Animar visualizador
 function animateVisualizer() {
-    if (!isPlaying) {
-        // Animación suave cuando no hay audio
-        visualizerBars.forEach((bar, index) => {
-            const height = 20 + Math.random() * 30;
-            bar.style.height = `${height}%`;
-        });
-    } else {
-        // Animación más intensa durante reproducción
-        visualizerBars.forEach((bar, index) => {
-            const baseHeight = Math.sin(Date.now() / 500 + index * 0.5) * 30 + 40;
-            const randomness = Math.random() * 30;
-            const height = Math.max(20, baseHeight + randomness);
-            bar.style.height = `${height}%`;
-        });
-    }
+    visualizerBars.forEach((bar, index) => {
+        const baseHeight = isPlaying ? 
+            Math.sin(Date.now() / 500 + index * 0.5) * 30 + 40 : 
+            20 + Math.random() * 30;
+        const randomness = Math.random() * (isPlaying ? 30 : 10);
+        const height = Math.max(20, baseHeight + randomness);
+        bar.style.height = `${height}%`;
+    });
     
     requestAnimationFrame(animateVisualizer);
 }
@@ -61,112 +42,44 @@ function updateSongName(name) {
     const songNameEl = document.getElementById('songName');
     if (songNameEl) {
         songNameEl.textContent = currentSongName;
-        // Animar cambio
-        songNameEl.style.animation = 'none';
-        setTimeout(() => {
-            songNameEl.style.animation = 'fadeIn 1s ease-in-out';
-        }, 10);
     }
 }
 
-// Event listeners del Cast Receiver
-playerManager.addEventListener(
-    cast.framework.events.EventType.MEDIA_STATUS,
-    (event) => {
-        console.log('Media status:', event);
+// Inicializar Cast Receiver
+function initializeCastReceiver() {
+    console.log('Initializing Cast Receiver...');
+    
+    if (!cast || !cast.framework) {
+        console.error('Cast SDK not loaded!');
+        return;
     }
-);
-
-// Cuando se carga un nuevo medio
-playerManager.addEventListener(
-    cast.framework.events.EventType.LOAD,
-    (event) => {
-        console.log('Media loaded:', event);
-        
-        const media = event.media;
-        if (media && media.metadata) {
-            updateSongName(media.metadata.title);
+    
+    const context = cast.framework.CastReceiverContext.getInstance();
+    const playerManager = context.getPlayerManager();
+    
+    // Event listeners
+    playerManager.addEventListener(cast.framework.events.EventType.LOAD, (event) => {
+        console.log('Media loaded:', event.media);
+        if (event.media && event.media.metadata && event.media.metadata.title) {
+            updateSongName(event.media.metadata.title);
         }
-        
-        // Extraer customData si está disponible
-        if (media && media.customData) {
-            console.log('Custom data:', media.customData);
-            if (media.customData.songName) {
-                updateSongName(media.customData.songName);
-            }
-        }
-        
-        return event;
-    }
-);
-
-// Cuando cambia el estado de reproducción
-playerManager.addEventListener(
-    cast.framework.events.EventType.PLAYER_STATE_CHANGED,
-    (event) => {
-        console.log('Player state changed:', event);
-        
-        switch (event.state) {
-            case 'PLAYING':
-                isPlaying = true;
-                console.log('Reproduciendo:', currentSongName);
-                break;
-            case 'PAUSED':
-                isPlaying = false;
-                console.log('Pausado');
-                break;
-            case 'IDLE':
-                isPlaying = false;
-                console.log('Detenido');
-                break;
-        }
-    }
-);
-
-// Interceptar metadata para obtener info de la canción
-playerManager.setMessageInterceptor(
-    cast.framework.messages.MessageType.LOAD,
-    (loadRequestData) => {
-        console.log('Load request:', loadRequestData);
-        
-        if (loadRequestData.media && loadRequestData.media.metadata) {
-            const metadata = loadRequestData.media.metadata;
-            updateSongName(metadata.title || 'Canción sin título');
-        }
-        
-        if (loadRequestData.media && loadRequestData.media.customData) {
-            const customData = loadRequestData.media.customData;
-            if (customData.songName) {
-                updateSongName(customData.songName);
-            }
-        }
-        
-        return loadRequestData;
-    }
-);
-
-// Opciones del receiver
-const options = new cast.framework.CastReceiverOptions();
-options.disableIdleTimeout = false;
-options.maxInactivity = 3600; // 1 hora
-
-// Configurar opciones de soporte de medios
-options.supportedCommands = cast.framework.messages.Command.ALL_BASIC_MEDIA;
-
-// Inicializar receiver
-console.log('Inicializando Cast Receiver...');
-try {
+    });
+    
+    playerManager.addEventListener(cast.framework.events.EventType.PLAYER_STATE_CHANGED, (event) => {
+        console.log('Player state:', event.playerState);
+        isPlaying = (event.playerState === cast.framework.messages.PlayerState.PLAYING);
+    });
+    
+    // Opciones e inicio
+    const options = new cast.framework.CastReceiverOptions();
+    options.disableIdleTimeout = false;
+    
     context.start(options);
-    console.log('Cast Receiver started successfully');
-} catch (error) {
-    console.error('Error starting receiver:', error);
+    console.log('Cast Receiver started!');
 }
 
-// Inicializar visualizador cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initVisualizer);
-} else {
+// Inicializar todo
+window.addEventListener('load', () => {
     initVisualizer();
-}
-
-console.log('Cast Receiver iniciado correctamente');
+    initializeCastReceiver();
+});
