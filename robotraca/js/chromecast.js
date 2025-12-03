@@ -98,8 +98,18 @@ function initializeCastApi() {
                 if (castContext) {
                     try {
                         mobileLog.info('Requesting cast session...');
-                        castContext.requestSession();
+                        mobileLog.info('Cast state before request: ' + castContext.getCastState());
+                        
+                        const result = castContext.requestSession();
                         mobileLog.success('requestSession() called');
+                        
+                        // Si devuelve una promesa, manejarla
+                        if (result && result.then) {
+                            result.then(
+                                () => mobileLog.success('Session request resolved'),
+                                (err) => mobileLog.error('Session request rejected: ' + err)
+                            );
+                        }
                     } catch (error) {
                         mobileLog.error('Error: ' + error.message);
                     }
