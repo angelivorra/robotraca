@@ -50,10 +50,10 @@ console.error = function(...args) {
 // Esperar a que el DOM esté listo antes de loguear
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        debugLog('✓ Receiver script v8 loaded', 'success');
+        debugLog('✓ Receiver script v10 - animaciones controladas', 'success');
     });
 } else {
-    debugLog('✓ Receiver script v8 loaded', 'success');
+    debugLog('✓ Receiver script v10 - animaciones controladas', 'success');
 }
 
 // Inicializar visualizador
@@ -75,15 +75,34 @@ function initVisualizer() {
 // Animar visualizador
 function animateVisualizer() {
     visualizerBars.forEach((bar, index) => {
-        const baseHeight = isPlaying ? 
-            Math.sin(Date.now() / 500 + index * 0.5) * 30 + 40 : 
-            20 + Math.random() * 30;
-        const randomness = Math.random() * (isPlaying ? 30 : 10);
-        const height = Math.max(20, baseHeight + randomness);
-        bar.style.height = `${height}%`;
+        if (isPlaying) {
+            const baseHeight = Math.sin(Date.now() / 500 + index * 0.5) * 30 + 40;
+            const randomness = Math.random() * 30;
+            const height = Math.max(20, baseHeight + randomness);
+            bar.style.height = `${height}%`;
+        } else {
+            // Cuando no está reproduciendo, barras bajas y estáticas
+            bar.style.height = '20px';
+        }
     });
     
     requestAnimationFrame(animateVisualizer);
+}
+
+// Controlar animación de ojos
+function updateEyesAnimation() {
+    const leftEye = document.querySelector('.left-eye .eye-img');
+    const rightEye = document.querySelector('.right-eye .eye-img');
+    
+    if (leftEye && rightEye) {
+        if (isPlaying) {
+            leftEye.classList.add('spinning');
+            rightEye.classList.add('spinning');
+        } else {
+            leftEye.classList.remove('spinning');
+            rightEye.classList.remove('spinning');
+        }
+    }
 }
 
 // Actualizar nombre de canción
@@ -124,12 +143,22 @@ function initializeCastReceiver() {
             }
         );
         
-        // Event listener para cambios de estado
+        // Event listeners para PLAYING y PAUSE
         playerManager.addEventListener(
-            cast.framework.events.EventType.PLAYER_STATE_CHANGED, 
+            cast.framework.events.EventType.PLAYING,
             (event) => {
-                debugLog('Estado del player: ' + event.playerState, 'info');
-                isPlaying = (event.playerState === cast.framework.messages.PlayerState.PLAYING);
+                debugLog('▶ PLAYING', 'success');
+                isPlaying = true;
+                updateEyesAnimation();
+            }
+        );
+        
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PAUSE,
+            (event) => {
+                debugLog('⏸ PAUSE', 'info');
+                isPlaying = false;
+                updateEyesAnimation();
             }
         );
         
