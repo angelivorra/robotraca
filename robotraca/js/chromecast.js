@@ -61,10 +61,10 @@ function initializeCastApi() {
         mobileLog.success('CastContext obtained');
         
         // TODO: Reemplazar con tu Application ID de Google Cast Developer Console
-        // Por ahora usa el default, pero cambiarás esto cuando registres tu app
-        // const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
-        const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F'; // Descomenta cuando tengas tu ID
-        mobileLog.info('Using App ID: ' + CUSTOM_RECEIVER_APP_ID);
+        // Por ahora usa el default para que aparezcan los dispositivos
+        const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
+        // const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F'; // Usa esto cuando registres tu receiver personalizado
+        mobileLog.info('Using App ID: DEFAULT_MEDIA_RECEIVER');
         
         // Configurar opciones
         castContext.setOptions({
