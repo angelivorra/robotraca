@@ -50,10 +50,10 @@ console.error = function(...args) {
 // Esperar a que el DOM esté listo antes de loguear
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        debugLog('Receiver script loaded', 'success');
+        debugLog('✓ Receiver script v8 loaded', 'success');
     });
 } else {
-    debugLog('Receiver script loaded', 'success');
+    debugLog('✓ Receiver script v8 loaded', 'success');
 }
 
 // Inicializar visualizador
