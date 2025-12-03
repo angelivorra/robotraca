@@ -60,11 +60,9 @@ function initializeCastApi() {
         castContext = cast.framework.CastContext.getInstance();
         mobileLog.success('CastContext obtained');
         
-        // Usando Default Receiver temporalmente
-        // El Custom Receiver FBEBF31F aún no está completamente propagado
-        const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
-        // const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F'; // Descomentar cuando esté listo
-        mobileLog.info('Using Default Receiver (temporary)');
+        // Custom Receiver con visualización personalizada
+        const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F';
+        mobileLog.info('Using Custom Receiver: FBEBF31F');
         
         // Configurar opciones
         castContext.setOptions({
