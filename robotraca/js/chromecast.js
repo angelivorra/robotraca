@@ -3,88 +3,165 @@ let castSession = null;
 let isCasting = false;
 let castContext = null;
 
+// Mobile Debug Logger
+const mobileLog = {
+    panel: null,
+    init: function() {
+        this.panel = document.getElementById('mobileDebug');
+        if (this.panel) {
+            this.panel.classList.add('active');
+            this.log('Debug panel initialized', 'info');
+            
+            // Capturar errores globales
+            window.addEventListener('error', (e) => {
+                this.error('Global error: ' + e.message);
+            });
+            
+            // Capturar rechazos de promesas
+            window.addEventListener('unhandledrejection', (e) => {
+                this.error('Promise rejected: ' + e.reason);
+            });
+        }
+    },
+    log: function(message, type = 'info') {
+        console.log(message);
+        if (!this.panel) return;
+        
+        const entry = document.createElement('div');
+        entry.className = `log-entry log-${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.textContent = `[${time}] ${message}`;
+        this.panel.appendChild(entry);
+        this.panel.scrollTop = this.panel.scrollHeight;
+        
+        // Limitar a 20 entradas
+        while (this.panel.children.length > 20) {
+            this.panel.removeChild(this.panel.firstChild);
+        }
+    },
+    error: function(message) { this.log(message, 'error'); },
+    success: function(message) { this.log(message, 'success'); },
+    info: function(message) { this.log(message, 'info'); }
+};
+
 // Configuración de Chromecast
 window['__onGCastApiAvailable'] = function(isAvailable) {
+    mobileLog.info('Cast API available: ' + isAvailable);
     if (isAvailable) {
         initializeCastApi();
+    } else {
+        mobileLog.error('Cast API not available');
     }
 };
 
 function initializeCastApi() {
-    castContext = cast.framework.CastContext.getInstance();
-    
-    // TODO: Reemplazar con tu Application ID de Google Cast Developer Console
-    // Por ahora usa el default, pero cambiarás esto cuando registres tu app
-    // const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
-    const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F'; // Descomenta cuando tengas tu ID
-    
-    // Configurar opciones
-    castContext.setOptions({
-        receiverApplicationId: CUSTOM_RECEIVER_APP_ID,
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-    });
-    
-    // Mostrar el botón de cast y agregar listener
-    const castBtn = document.getElementById('castBtn');
-    if (castBtn) {
-        castBtn.classList.remove('hidden');
+    try {
+        mobileLog.info('Initializing Cast API...');
+        castContext = cast.framework.CastContext.getInstance();
+        mobileLog.success('CastContext obtained');
         
-        // Agregar click listener manual por si el SDK no responde
-        castBtn.addEventListener('click', function(e) {
-            console.log('Cast button clicked');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Intentar abrir diálogo de Cast
-            if (castContext) {
-                try {
-                    castContext.requestSession();
-                    console.log('Requesting cast session...');
-                } catch (error) {
-                    console.error('Error requesting cast session:', error);
-                }
-            }
+        // TODO: Reemplazar con tu Application ID de Google Cast Developer Console
+        // Por ahora usa el default, pero cambiarás esto cuando registres tu app
+        // const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
+        const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F'; // Descomenta cuando tengas tu ID
+        mobileLog.info('Using App ID: ' + CUSTOM_RECEIVER_APP_ID);
+        
+        // Configurar opciones
+        castContext.setOptions({
+            receiverApplicationId: CUSTOM_RECEIVER_APP_ID,
+            autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
         });
+        mobileLog.success('Cast options configured');
+        
+        // Mostrar el botón de cast y agregar listener
+        const castBtn = document.getElementById('castBtn');
+        if (castBtn) {
+            castBtn.classList.remove('hidden');
+            mobileLog.success('Cast button found and shown');
+            
+            // Agregar múltiples listeners para debug
+            castBtn.addEventListener('touchstart', function(e) {
+                mobileLog.info('TOUCH START on cast button');
+                castBtn.style.opacity = '0.7';
+            });
+            
+            castBtn.addEventListener('touchend', function(e) {
+                mobileLog.info('TOUCH END on cast button');
+                castBtn.style.opacity = '1';
+            });
+            
+            castBtn.addEventListener('click', function(e) {
+                mobileLog.info('CAST BUTTON CLICKED!');
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Intentar abrir diálogo de Cast
+                if (castContext) {
+                    try {
+                        mobileLog.info('Requesting cast session...');
+                        castContext.requestSession();
+                        mobileLog.success('requestSession() called');
+                    } catch (error) {
+                        mobileLog.error('Error: ' + error.message);
+                    }
+                } else {
+                    mobileLog.error('castContext is null!');
+                }
+            });
+            
+            // Test inmediato
+            mobileLog.info('Button bounds: ' + JSON.stringify(castBtn.getBoundingClientRect()));
+            mobileLog.info('Button styles: opacity=' + window.getComputedStyle(castBtn).opacity);
+        } else {
+            mobileLog.error('Cast button NOT found!');
+        }
+        
+        // Escuchar cambios en el estado de la sesión
+        castContext.addEventListener(
+            cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+            onSessionStateChanged
+        );
+        
+        // Escuchar cambios en el estado de cast
+        castContext.addEventListener(
+            cast.framework.CastContextEventType.CAST_STATE_CHANGED,
+            onCastStateChanged
+        );
+        
+        mobileLog.success('Chromecast initialized OK');
+    } catch (error) {
+        mobileLog.error('Init error: ' + error.message);
     }
-    
-    // Escuchar cambios en el estado de la sesión
-    castContext.addEventListener(
-        cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-        onSessionStateChanged
-    );
-    
-    // Escuchar cambios en el estado de cast
-    castContext.addEventListener(
-        cast.framework.CastContextEventType.CAST_STATE_CHANGED,
-        onCastStateChanged
-    );
-    
-    console.log('Chromecast inicializado correctamente');
 }
 
 function onSessionStateChanged(event) {
+    mobileLog.info('Session state changed: ' + event.sessionState);
     switch (event.sessionState) {
         case cast.framework.SessionState.SESSION_STARTED:
             castSession = castContext.getCurrentSession();
             isCasting = true;
+            mobileLog.success('Cast session STARTED');
             onCastConnected();
             break;
         case cast.framework.SessionState.SESSION_ENDED:
             castSession = null;
             isCasting = false;
+            mobileLog.info('Cast session ENDED');
             onCastDisconnected();
             break;
     }
 }
 
 function onCastStateChanged(event) {
-    console.log('Cast state changed:', event.castState);
+    mobileLog.info('Cast state: ' + event.castState);
 }
 
 function onCastConnected() {
-    console.log('Conectado a Chromecast');
-    console.log('Application ID en uso:', castContext.getSessionContext()?.applicationId);
-    console.log('¿Es Default Receiver?', castContext.getSessionContext()?.applicationId === chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID);
+    mobileLog.success('Connected to Chromecast!');
+    const appId = castContext.getSessionContext()?.applicationId;
+    mobileLog.info('App ID in use: ' + appId);
+    const isDefault = appId === chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
+    mobileLog.info('Is Default Receiver? ' + isDefault);
     
     // Crear visualización personalizada para TV
     loadCastVisualizer();
@@ -306,9 +383,13 @@ function setupCastIntegration() {
     };
 }
 
-// Inicializar integración cuando el DOM esté listo
+// Inicializar debug panel y cast integration cuando el DOM esté listo
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupCastIntegration);
+    document.addEventListener('DOMContentLoaded', function() {
+        mobileLog.init();
+        setupCastIntegration();
+    });
 } else {
+    mobileLog.init();
     setupCastIntegration();
 }
