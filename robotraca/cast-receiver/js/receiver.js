@@ -110,30 +110,38 @@ function initializeCastReceiver() {
         const context = cast.framework.CastReceiverContext.getInstance();
         const playerManager = context.getPlayerManager();
         
-        debugLog('Context y PlayerManager OK');
+        debugLog('Context y PlayerManager OK', 'success');
         
-        // Event listeners
-        playerManager.addEventListener(cast.framework.events.EventType.LOAD, (event) => {
-            debugLog('Media cargada: ' + (event.media?.metadata?.title || 'sin título'));
-            if (event.media && event.media.metadata && event.media.metadata.title) {
-                updateSongName(event.media.metadata.title);
+        // Interceptar mensajes LOAD
+        playerManager.setMessageInterceptor(
+            cast.framework.messages.MessageType.LOAD,
+            (loadRequestData) => {
+                debugLog('LOAD interceptado: ' + (loadRequestData.media?.metadata?.title || 'sin título'), 'success');
+                if (loadRequestData.media && loadRequestData.media.metadata && loadRequestData.media.metadata.title) {
+                    updateSongName(loadRequestData.media.metadata.title);
+                }
+                return loadRequestData;
             }
-        });
+        );
         
-        playerManager.addEventListener(cast.framework.events.EventType.PLAYER_STATE_CHANGED, (event) => {
-            debugLog('Estado: ' + event.playerState);
-            isPlaying = (event.playerState === cast.framework.messages.PlayerState.PLAYING);
-        });
+        // Event listener para cambios de estado
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PLAYER_STATE_CHANGED, 
+            (event) => {
+                debugLog('Estado del player: ' + event.playerState, 'info');
+                isPlaying = (event.playerState === cast.framework.messages.PlayerState.PLAYING);
+            }
+        );
         
-        debugLog('Listeners configurados');
+        debugLog('Listeners configurados', 'success');
         
         // Opciones e inicio
         const options = new cast.framework.CastReceiverOptions();
         options.disableIdleTimeout = false;
         
-        debugLog('Iniciando receiver...');
+        debugLog('Iniciando receiver...', 'info');
         context.start(options);
-        debugLog('RECEIVER INICIADO OK!');
+        debugLog('✓ RECEIVER INICIADO OK!', 'success');
         
         // Después de 2 segundos, volver a mostrar "Esperando canción..."
         setTimeout(() => {
