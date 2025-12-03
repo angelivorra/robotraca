@@ -137,6 +137,11 @@ function initializeCastApi() {
         );
         
         mobileLog.success('Chromecast initialized OK');
+        
+        // Log del estado inicial
+        setTimeout(() => {
+            mobileLog.info('Cast state: ' + castContext.getCastState());
+        }, 1000);
     } catch (error) {
         mobileLog.error('Init error: ' + error.message);
     }
@@ -493,10 +498,10 @@ function setupCastIntegration() {
 // Inicializar debug panel y cast integration cuando el DOM esté listo
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
-        mobileLog.init();
+        // mobileLog.init();  // Comentado para ocultar el debug panel
         setupCastIntegration();
     });
 } else {
-    mobileLog.init();
+    // mobileLog.init();  // Comentado para ocultar el debug panel
     setupCastIntegration();
 }
