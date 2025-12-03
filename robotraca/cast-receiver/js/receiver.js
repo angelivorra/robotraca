@@ -50,10 +50,10 @@ console.error = function(...args) {
 // Esperar a que el DOM esté listo antes de loguear
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        debugLog('✓ Receiver script v10 - animaciones controladas', 'success');
+        debugLog('✓ Receiver script v11 - audio element added', 'success');
     });
 } else {
-    debugLog('✓ Receiver script v10 - animaciones controladas', 'success');
+    debugLog('✓ Receiver script v11 - audio element added', 'success');
 }
 
 // Inicializar visualizador
@@ -131,6 +131,14 @@ function initializeCastReceiver() {
         
         debugLog('Context y PlayerManager OK', 'success');
         
+        // Obtener referencia al elemento de audio
+        const playerElement = document.getElementById('player');
+        if (playerElement) {
+            debugLog('Elemento <audio> encontrado', 'success');
+        } else {
+            debugLog('ERROR: No se encuentra elemento <audio>', 'error');
+        }
+        
         // Interceptar mensajes LOAD
         playerManager.setMessageInterceptor(
             cast.framework.messages.MessageType.LOAD,
@@ -159,6 +167,22 @@ function initializeCastReceiver() {
                 debugLog('⏸ PAUSE', 'info');
                 isPlaying = false;
                 updateEyesAnimation();
+            }
+        );
+        
+        // Listener para cuando termina de cargar
+        playerManager.addEventListener(
+            cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
+            (event) => {
+                debugLog('✓ Media cargada completamente', 'success');
+            }
+        );
+        
+        // Listener para errores
+        playerManager.addEventListener(
+            cast.framework.events.EventType.ERROR,
+            (event) => {
+                debugLog('❌ ERROR: ' + (event.detailedErrorCode || 'unknown'), 'error');
             }
         );
         
