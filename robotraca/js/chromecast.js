@@ -62,9 +62,8 @@ function initializeCastApi() {
         
         // Usando Default Receiver temporalmente
         // Cambiar a 'FBEBF31F' cuando el Custom Receiver esté propagado (15-30 min)
-        const CUSTOM_RECEIVER_APP_ID = chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID;
-        // const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F';
-        mobileLog.info('Using Default Receiver (temporary)');
+        const CUSTOM_RECEIVER_APP_ID = 'FBEBF31F';
+        //mobileLog.info('Using Default Receiver (temporary)');
         
         // Configurar opciones
         castContext.setOptions({
