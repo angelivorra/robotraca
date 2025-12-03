@@ -6,9 +6,14 @@ let visualizerBars = [];
 let isPlaying = false;
 let debugPanel;
 
+// Guardar referencias originales ANTES de cualquier otra cosa
+const originalLog = console.log;
+const originalError = console.error;
+
 // Sistema de logging visual mejorado
 function debugLog(message, type = 'info') {
-    console.log(message);
+    // Usar la función original para evitar recursión
+    originalLog(message);
     
     if (!debugPanel) {
         debugPanel = document.getElementById('debugPanel');
@@ -32,9 +37,6 @@ function debugLog(message, type = 'info') {
 }
 
 // Capturar todos los console.log/error
-const originalLog = console.log;
-const originalError = console.error;
-
 console.log = function(...args) {
     originalLog.apply(console, args);
     debugLog(args.join(' '), 'info');
@@ -45,7 +47,14 @@ console.error = function(...args) {
     debugLog('ERROR: ' + args.join(' '), 'error');
 };
 
-debugLog('Receiver script loaded', 'success');
+// Esperar a que el DOM esté listo antes de loguear
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        debugLog('Receiver script loaded', 'success');
+    });
+} else {
+    debugLog('Receiver script loaded', 'success');
+}
 
 // Inicializar visualizador
 function initVisualizer() {
@@ -138,6 +147,16 @@ function initializeCastReceiver() {
 
 // Inicializar todo
 window.addEventListener('load', () => {
+    debugLog('Window loaded - iniciando...', 'info');
     initVisualizer();
+    debugLog('Visualizer initialized', 'success');
     initializeCastReceiver();
 });
+
+// También agregar un log inmediato para verificar
+setTimeout(() => {
+    const panel = document.getElementById('debugPanel');
+    if (panel && panel.children.length === 0) {
+        panel.innerHTML = '<div style="color: #f00;">ERROR: No se están ejecutando los logs. Verifica la consola del navegador.</div>';
+    }
+}, 1000);
