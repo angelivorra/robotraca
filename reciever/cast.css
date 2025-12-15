@@ -1,0 +1,20 @@
+.background {
+  background: url(background.png);
+}
+
+.logo {
+  background-image: url(robotraca.png);
+}
+
+.progressBar {
+  background-color: rgb(155, 255, 100);
+}
+
+.splash {
+  background-image: url(logo.png);
+}
+
+.watermark {
+  background-image: url(icon.png);
+  background-size: 192px 192px;
+}
