@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Robotraca Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/player-png.css">
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('css/fuente.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <!-- Cabeza del robot (fondo) -->
+        <div class="robot-head">
+            <img src="images/robot/cabeza.png" alt="Robot Head" class="head-img">
+            
+            <!-- Contenedor de ojos -->
+            <div class="eyes-container" id="eyesContainer">
+                <!-- Ojo izquierdo -->
+                <div class="eye-wrapper left-eye" id="leftEye">
+                    <img src="images/robot/ojo_izquierdo.png" alt="Left Eye" class="eye-img">
+                </div>
+                
+                <!-- Ojo derecho -->
+                <div class="eye-wrapper right-eye" id="rightEye">
+                    <img src="images/robot/ojo_derecho.png" alt="Right Eye" class="eye-img">
+                </div>
+            </div>
+            
+            <!-- Display de información de la canción -->
+            <div class="song-info" id="songInfo">
+                <div class="robot-name">Robotraca v0.16</div>
+                <div class="song-name" id="songName">Pulse Play</div>
+            </div>
+            
+            <!-- Controles -->
+            <div class="controls" id="controls">
+                <button class="control-btn" id="prevBtn">
+                    <i class="fas fa-backward"></i>
+                </button>
+                
+                <button class="control-btn play-btn" id="playBtn">
+                    <i class="fas fa-play play-icon"></i>
+                    <i class="fas fa-pause pause-icon hidden"></i>
+                </button>
+                
+                <button class="control-btn" id="nextBtn">
+                    <i class="fas fa-forward"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Botón de Chromecast -->
+        <button class="cast-btn" id="castBtn" title="Enviar a TV">
+            <svg viewBox="0 0 24 24" class="cast-icon">
+                <path d="M1,18 L1,21 L4,21 C4,19.34 2.66,18 1,18 Z M1,14 L1,16 C3.76,16 6,18.24 6,21 L8,21 C8,17.13 4.87,14 1,14 Z M1,10 L1,12 C5.97,12 10,16.03 10,21 L12,21 C12,14.92 7.07,10 1,10 Z M21,3 L3,3 C1.9,3 1,3.9 1,5 L1,8 L3,8 L3,5 L21,5 L21,19 L14,19 L14,21 L21,21 C22.1,21 23,20.1 23,19 L23,5 C23,3.9 22.1,3 21,3 Z" fill="currentColor"/>
+            </svg>
+        </button>
+        
+        <!-- Panel de debug móvil -->
+        <div id="mobileDebug" class="mobile-debug"></div>
+        
+        <!-- Audio element -->
+        <audio id="audioPlayer" preload="metadata"></audio>
+    </div>
+    
+    <!-- Panel de configuración (para desarrollo) -->
+    <div class="config-panel" id="configPanel">
+        <button class="config-toggle" id="configToggle">⚙️</button>
+        <div class="config-content hidden" id="configContent">
+            <h3>Configuración de Posiciones</h3>
+            
+            <div class="config-group">
+                <label>Distancia entre ojos: <span id="eyeDistanceValue">40</span>%</label>
+                <input type="range" id="eyeDistance" min="20" max="80" value="40" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Posición vertical ojos: <span id="eyeVerticalValue">40</span>%</label>
+                <input type="range" id="eyeVertical" min="0" max="80" value="40" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Posición vertical canción: <span id="songVerticalValue">70</span>%</label>
+                <input type="range" id="songVertical" min="0" max="90" value="70" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño texto Robotraca: <span id="robotNameSizeValue">6</span>% cabeza</label>
+                <input type="range" id="robotNameSize" min="1" max="12" value="6" step="0.5">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño texto canción: <span id="songNameSizeValue">4</span>% cabeza</label>
+                <input type="range" id="songNameSize" min="0.5" max="10" value="4" step="0.5">
+            </div>
+            
+            <div class="config-group">
+                <label>Posición vertical controles: <span id="controlsVerticalValue">85</span>%</label>
+                <input type="range" id="controlsVertical" min="30" max="100" value="85" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño ojo izquierdo: <span id="leftEyeSizeValue">15</span>%</label>
+                <input type="range" id="leftEyeSize" min="5" max="30" value="15" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño ojo derecho: <span id="rightEyeSizeValue">15</span>%</label>
+                <input type="range" id="rightEyeSize" min="5" max="30" value="15" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Tamaño de botones: <span id="buttonSizeValue">12</span>% cabeza</label>
+                <input type="range" id="buttonSize" min="5" max="25" value="12" step="1">
+            </div>
+            
+            <div class="config-group">
+                <label>Ancho de botones: <span id="buttonWidthValue">60</span>%</label>
+                <input type="range" id="buttonWidth" min="20" max="100" value="60" step="5">
+            </div>
+            
+            <button class="export-config" id="exportConfig">Exportar Config</button>
+            <pre class="config-output" id="configOutput"></pre>
+        </div>
+    </div>
+    
+    <script src="js/player-styled-receiver.js"></script>
+</body>
+</html>
