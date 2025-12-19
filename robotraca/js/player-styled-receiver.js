@@ -7,6 +7,10 @@ const songs = [
     {
         path: 'audio/track2.mp3',
         name: 'Gobierno de la IA'
+    },
+    {
+        path: 'audio/tontos.mp3',
+        name: 'Tontos'
     }
 ];
 
