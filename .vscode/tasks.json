@@ -1,0 +1,47 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🌐 Servidor Local - Video Player",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "-m",
+                "http.server",
+                "8080",
+                "--directory",
+                "${workspaceFolder}"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "clear": true
+            },
+            "isBackground": true,
+            "group": "build",
+            "detail": "Inicia servidor en http://localhost:8080/video_player/"
+        },
+        {
+            "label": "🌐 Servidor Local - Puerto 3000",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "-m",
+                "http.server",
+                "3000",
+                "--directory",
+                "${workspaceFolder}"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "clear": true
+            },
+            "isBackground": true,
+            "group": "build",
+            "detail": "Inicia servidor en http://localhost:3000/video_player/"
+        }
+    ]
+}

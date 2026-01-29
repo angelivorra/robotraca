@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ROBOTRACA // Video Player</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+    
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo-container">
+                <div class="logo-glitch" data-text="ROBOTRACA">ROBOTRACA</div>
+                <div class="subtitle">// SISTEMA DE TRANSMISIÓN</div>
+            </div>
+        </header>
+
+        <!-- Main Menu - Song Selection -->
+        <main class="main-menu" id="mainMenu">
+            <h2 class="section-title">
+                <span class="bracket">[</span> SELECCIONAR PISTA <span class="bracket">]</span>
+            </h2>
+            
+            <div class="song-grid" id="songGrid">
+                <!-- Se genera dinámicamente desde JS -->
+            </div>
+        </main>
+
+        <!-- Player View -->
+        <section class="player-view hidden" id="playerView">
+            <button class="back-btn" onclick="goBack()">
+                <span class="back-icon">◄</span> VOLVER
+            </button>
+
+            <div class="now-playing">
+                <div class="track-display">
+                    <span class="track-label">REPRODUCIENDO //</span>
+                    <span class="track-name" id="currentTrackName">PISTA</span>
+                </div>
+            </div>
+
+            <!-- Video Container -->
+            <div class="video-wrapper">
+                <div class="video-frame">
+                    <video id="videoPlayer" playsinline>
+                        <source src="" type="video/mp4">
+                    </video>
+                    <div class="video-overlay" id="videoOverlay">
+                        <div class="play-icon">▶</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-panel">
+                <!-- Progress Bar -->
+                <div class="progress-container">
+                    <div class="time-display">
+                        <span id="currentTime">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                        <div class="progress-glow"></div>
+                    </div>
+                </div>
+
+                <!-- Main Controls -->
+                <div class="main-controls">
+                    <button class="control-btn" id="prevBtn" onclick="prevSong()" title="Anterior">
+                        <span class="btn-icon">⏮</span>
+                    </button>
+                    <button class="control-btn play-btn" id="playBtn" onclick="togglePlay()">
+                        <span class="btn-icon" id="playIcon">▶</span>
+                    </button>
+                    <button class="control-btn" id="nextBtn" onclick="nextSong()" title="Siguiente">
+                        <span class="btn-icon">⏭</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="status-bar">
+                <span class="status-item">ROBOTRACA</span>
+                <span class="status-item">SISTEMA: ACTIVO</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="js/player.js"></script>
+</body>
+</html>
