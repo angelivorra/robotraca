@@ -10,21 +10,27 @@
 const SONGS = [
     {
         id: 1,
-        title: "ABDUCCION",
+        title: "ESTO ES UNA ABDUCCION",
         video: "videos/abduccion.mp4",
         duration: "1:18"
     },
     {
         id: 2,
-        title: "ENERGIA",
+        title: "ME QUEDO SIN ENERGIA",
         video: "videos/energia.mp4",
         duration: "1:44"
     },
     {
         id: 3,
-        title: "TONTOS",
+        title: "QUE TONTOS SON",
         video: "videos/tontos.mp4",
         duration: "1:37"
+    },
+    {
+        id: 4,
+        title: "SARTENAZOS DE PLUTON",
+        video: "videos/sarten.mp4",
+        duration: "2:04"
     }
 ];
 
