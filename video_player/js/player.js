@@ -1,10 +1,10 @@
 /**
- * ROBOTRACA Video Player
- * Retro Sci-Fi Video Player
+ * ROBOTRACA 8-BIT PLAYER
+ * Super Nintendo Style Video Player
  */
 
 // ========================================
-// CONFIGURATION - Edita estos datos
+// CONFIGURACIÓN - Edita estos datos
 // ========================================
 
 const SONGS = [
@@ -12,154 +12,219 @@ const SONGS = [
         id: 1,
         title: "ESTO ES UNA ABDUCCION",
         video: "videos/abduccion.mp4",
+        image: "img/abduccion.png",
         duration: "1:18"
     },
     {
         id: 2,
         title: "ME QUEDO SIN ENERGIA",
         video: "videos/energia.mp4",
+        image: "img/energia.png",
         duration: "1:44"
     },
     {
         id: 3,
         title: "QUE TONTOS SON",
         video: "videos/tontos.mp4",
+        image: "img/tontos.png",
         duration: "1:37"
     },
     {
         id: 4,
         title: "SARTENAZOS DE PLUTON",
         video: "videos/sarten.mp4",
+        image: "img/sarten.png",
         duration: "2:04"
     }
 ];
 
 // ========================================
-// STATE
+// ESTADO
 // ========================================
 
-let currentSong = null;
+let currentSongIndex = -1;
 let isPlaying = false;
 
 // DOM Elements
-const mainMenu = document.getElementById('mainMenu');
-const playerView = document.getElementById('playerView');
+const mainScreen = document.getElementById('mainScreen');
+const playerScreen = document.getElementById('playerScreen');
+const songList = document.getElementById('songList');
+const playerBg = document.getElementById('playerBg');
 const videoPlayer = document.getElementById('videoPlayer');
-const videoOverlay = document.getElementById('videoOverlay');
-const playBtn = document.getElementById('playBtn');
+
+const btnBack = document.getElementById('btnBack');
+const btnPlay = document.getElementById('btnPlay');
+const btnPrev = document.getElementById('btnPrev');
+const btnNext = document.getElementById('btnNext');
 const playIcon = document.getElementById('playIcon');
-const progressBar = document.getElementById('progressBar');
-const progressFill = document.getElementById('progressFill');
-const currentTimeEl = document.getElementById('currentTime');
-const durationEl = document.getElementById('duration');
-const currentTrackName = document.getElementById('currentTrackName');
-const songGrid = document.getElementById('songGrid');
 
 // ========================================
-// INITIALIZATION
+// INICIALIZACIÓN
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    generateSongCards();
-    initializePlayer();
+    generateSongList();
+    initializeEventListeners();
 });
 
-function generateSongCards() {
-    songGrid.innerHTML = '';
+function generateSongList() {
+    songList.innerHTML = '';
+    
     SONGS.forEach((song, index) => {
-        const card = document.createElement('button');
-        card.className = 'song-card';
-        card.dataset.song = song.id;
-        card.onclick = () => selectSong(song.id);
-        card.innerHTML = `
-            <div class="song-number">${String(index + 1).padStart(2, '0')}</div>
-            <div class="song-info">
-                <div class="song-title">${song.title}</div>
-                <div class="song-duration">${song.duration}</div>
-            </div>
-            <div class="song-indicator"></div>
+        const item = document.createElement('button');
+        item.className = 'song-item';
+        item.dataset.index = index;
+        item.setAttribute('role', 'listitem');
+        item.innerHTML = `
+            <span class="song-number">${String(index + 1).padStart(2, '0')}</span>
+            <span class="song-title">${song.title}</span>
+            <span class="song-arrow">▶</span>
         `;
-        songGrid.appendChild(card);
+        
+        item.addEventListener('click', () => selectSong(index));
+        songList.appendChild(item);
     });
 }
 
-function initializePlayer() {
+function initializeEventListeners() {
+    // Botones
+    btnBack.addEventListener('click', goBack);
+    btnPlay.addEventListener('click', togglePlay);
+    btnPrev.addEventListener('click', prevSong);
+    btnNext.addEventListener('click', nextSong);
+    
     // Video events
-    videoPlayer.addEventListener('timeupdate', updateProgress);
-    videoPlayer.addEventListener('loadedmetadata', updateDuration);
-    videoPlayer.addEventListener('play', () => setPlayState(true));
-    videoPlayer.addEventListener('pause', () => setPlayState(false));
+    videoPlayer.addEventListener('play', () => updatePlayState(true));
+    videoPlayer.addEventListener('pause', () => updatePlayState(false));
     videoPlayer.addEventListener('ended', handleEnded);
     
-    // Progress bar click
-    progressBar.addEventListener('click', seekTo);
+    // Keyboard controls
+    document.addEventListener('keydown', handleKeyboard);
     
-    // Video overlay click
-    videoOverlay.addEventListener('click', togglePlay);
+    // Fullscreen change
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 }
 
 // ========================================
-// SONG SELECTION
+// NAVEGACIÓN
 // ========================================
 
-function selectSong(songId) {
-    currentSong = SONGS.find(s => s.id === songId);
-    if (!currentSong) return;
+function selectSong(index) {
+    currentSongIndex = index;
+    const song = SONGS[index];
     
-    // Update UI
-    currentTrackName.textContent = currentSong.title;
+    // Cargar imagen de fondo
+    playerBg.style.backgroundImage = `url('${song.image}')`;
     
-    // Load video
-    videoPlayer.src = currentSong.video;
+    // Cargar video
+    videoPlayer.src = song.video;
     videoPlayer.load();
     
-    // Show player view
-    mainMenu.classList.add('hidden');
-    playerView.classList.remove('hidden');
-    
-    // Reset state
+    // Resetear estado
     isPlaying = false;
     updatePlayButton();
-    videoOverlay.classList.remove('hidden');
+    
+    // Mostrar player screen
+    mainScreen.classList.add('hidden');
+    playerScreen.classList.remove('hidden');
 }
 
 function goBack() {
-    // Pause and reset
+    // Pausar y resetear
     videoPlayer.pause();
     videoPlayer.currentTime = 0;
-    isPlaying = false;
+    exitFullscreen();
     
-    // Show menu
-    playerView.classList.add('hidden');
-    mainMenu.classList.remove('hidden');
+    isPlaying = false;
+    updatePlayButton();
+    
+    // Volver al menú
+    playerScreen.classList.add('hidden');
+    mainScreen.classList.remove('hidden');
 }
 
 // ========================================
-// PLAYBACK CONTROLS
+// CONTROLES DE REPRODUCCIÓN
 // ========================================
 
 function togglePlay() {
     if (isPlaying) {
         videoPlayer.pause();
-        exitFullscreen();
     } else {
         videoPlayer.play();
-        videoOverlay.classList.add('hidden');
-        enterFullscreen();
     }
 }
 
-function setPlayState(playing) {
+// Click en el video para pausar y mostrar controles
+videoPlayer.addEventListener('click', (e) => {
+    if (isPlaying) {
+        videoPlayer.pause();
+    }
+});
+
+function updatePlayState(playing) {
     isPlaying = playing;
     updatePlayButton();
     
     if (playing) {
-        videoOverlay.classList.add('hidden');
+        playerScreen.classList.add('playing');
+    } else {
+        playerScreen.classList.remove('playing');
     }
 }
 
 function updatePlayButton() {
-    playIcon.textContent = isPlaying ? '⏸' : '▶';
+    playIcon.textContent = isPlaying ? '❚❚' : '▶';
+}
+
+function prevSong() {
+    if (currentSongIndex < 0) return;
+    
+    const wasPlaying = isPlaying;
+    const wasFullscreen = isInFullscreen();
+    
+    const prevIndex = currentSongIndex > 0 
+        ? currentSongIndex - 1 
+        : SONGS.length - 1;
+    
+    selectSong(prevIndex);
+    
+    // Continuar reproduciendo si estaba reproduciendo
+    if (wasPlaying) {
+        videoPlayer.play();
+        if (wasFullscreen) {
+            setTimeout(() => enterFullscreen(), 100);
+        }
+    }
+}
+
+function nextSong() {
+    if (currentSongIndex < 0) return;
+    
+    const wasPlaying = isPlaying;
+    const wasFullscreen = isInFullscreen();
+    
+    const nextIndex = currentSongIndex < SONGS.length - 1 
+        ? currentSongIndex + 1 
+        : 0;
+    
+    selectSong(nextIndex);
+    
+    // Continuar reproduciendo si estaba reproduciendo
+    if (wasPlaying) {
+        videoPlayer.play();
+        if (wasFullscreen) {
+            setTimeout(() => enterFullscreen(), 100);
+        }
+    }
+}
+
+function handleEnded() {
+    // Auto-siguiente
+    nextSong();
+    // Continuar reproduciendo
+    videoPlayer.play();
 }
 
 // ========================================
@@ -167,12 +232,9 @@ function updatePlayButton() {
 // ========================================
 
 function enterFullscreen() {
-    const videoFrame = document.querySelector('.video-frame');
-    
     if (videoPlayer.requestFullscreen) {
         videoPlayer.requestFullscreen();
     } else if (videoPlayer.webkitRequestFullscreen) {
-        // Safari
         videoPlayer.webkitRequestFullscreen();
     } else if (videoPlayer.webkitEnterFullscreen) {
         // iOS Safari
@@ -183,7 +245,7 @@ function enterFullscreen() {
 }
 
 function exitFullscreen() {
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
+    if (isInFullscreen()) {
         if (document.exitFullscreen) {
             document.exitFullscreen();
         } else if (document.webkitExitFullscreen) {
@@ -194,87 +256,48 @@ function exitFullscreen() {
     }
 }
 
-// Manejar cuando se sale de fullscreen manualmente
-document.addEventListener('fullscreenchange', handleFullscreenChange);
-document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+function isInFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
 
 function handleFullscreenChange() {
-    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-    
-    // Si se sale de fullscreen mientras reproduce, pausar
-    if (!isFullscreen && isPlaying) {
-        // Opcional: descomentar para pausar al salir de fullscreen
-        // videoPlayer.pause();
-    }
-}
-
-function prevSong() {
-    if (!currentSong) return;
-    const wasFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-    const currentIndex = SONGS.findIndex(s => s.id === currentSong.id);
-    const prevIndex = currentIndex > 0 ? currentIndex - 1 : SONGS.length - 1;
-    selectSong(SONGS[prevIndex].id);
-    
-    // Reproducir automáticamente y mantener fullscreen
-    videoPlayer.play();
-    if (wasFullscreen) {
-        setTimeout(() => enterFullscreen(), 100);
-    }
-}
-
-function nextSong() {
-    if (!currentSong) return;
-    const wasFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
-    const currentIndex = SONGS.findIndex(s => s.id === currentSong.id);
-    const nextIndex = currentIndex < SONGS.length - 1 ? currentIndex + 1 : 0;
-    selectSong(SONGS[nextIndex].id);
-    
-    // Reproducir automáticamente y mantener fullscreen
-    videoPlayer.play();
-    if (wasFullscreen) {
-        setTimeout(() => enterFullscreen(), 100);
-    }
-}
-
-function handleEnded() {
-    // Auto-avanzar a la siguiente canción (mantiene fullscreen)
-    nextSong();
+    // Opcional: pausar al salir de fullscreen
+    // if (!isInFullscreen() && isPlaying) {
+    //     videoPlayer.pause();
+    // }
 }
 
 // ========================================
-// PROGRESS & TIME
+// TECLADO
 // ========================================
 
-function updateProgress() {
-    if (videoPlayer.duration) {
-        const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-        progressFill.style.width = `${progress}%`;
-        currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
+function handleKeyboard(e) {
+    // Solo si estamos en player screen
+    if (playerScreen.classList.contains('hidden')) return;
+    
+    switch(e.key) {
+        case ' ':
+        case 'Enter':
+            e.preventDefault();
+            togglePlay();
+            break;
+        case 'Escape':
+            goBack();
+            break;
+        case 'ArrowLeft':
+            prevSong();
+            break;
+        case 'ArrowRight':
+            nextSong();
+            break;
     }
-}
-
-function updateDuration() {
-    durationEl.textContent = formatTime(videoPlayer.duration);
-}
-
-function seekTo(event) {
-    const rect = progressBar.getBoundingClientRect();
-    const pos = (event.clientX - rect.left) / rect.width;
-    videoPlayer.currentTime = pos * videoPlayer.duration;
-}
-
-function formatTime(seconds) {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 // ========================================
 // UTILITIES
 // ========================================
 
-// Prevent zoom on double tap
+// Prevenir zoom en doble tap
 document.addEventListener('touchend', (event) => {
     const now = Date.now();
     if (now - (window.lastTouchEnd || 0) < 300) {
@@ -282,11 +305,3 @@ document.addEventListener('touchend', (event) => {
     }
     window.lastTouchEnd = now;
 }, { passive: false });
-
-// Handle visibility change (pause when tab hidden)
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && isPlaying && !isCastConnected) {
-        // Optionally pause when tab is hidden
-        // videoPlayer.pause();
-    }
-});
