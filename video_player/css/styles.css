@@ -252,6 +252,13 @@ body {
     transition: opacity 0.3s ease;
 }
 
+/* Fullscreen: mantener aspect ratio con barras negras */
+.player-video:fullscreen,
+.player-video:-webkit-full-screen {
+    object-fit: contain;
+    background: #000;
+}
+
 /* Cuando está reproduciendo: mostrar video, ocultar fondo */
 .player-screen.playing .player-bg {
     opacity: 0;
