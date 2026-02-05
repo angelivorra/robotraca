@@ -1,0 +1,36 @@
+{
+  "head": {
+    "docType": "1",
+    "editorVersion": "6.5.22",
+    "title": "Circuito Control Solenoide 12V con LED",
+    "description": "Componente que recibe 12V de un relé y controla un solenoide de 2A con LED indicador y protección contra picos",
+    "c_para": {},
+    "hasId498": true
+  },
+  "canvas": "CA~1000~1000~#FFFFFF~yes~#CCCCCC~5~1000~1000~line~10~pixel~5~0~0",
+  "shape": [
+    "LIB~320~260~package`CONN-TH_P2.54-2P`BOM_Manufacturer``BOM_Manufacturer Part``BOM_Supplier Part``BOM_Supplier``link``spicePre``spiceSymbolName``~~0~gge1~0~J1~1~270~#@$T~N~328~252~0~#FF0000~Arial~~~~~comment~+12V IN~1~start~gge2~0~#@$T~N~328~268~0~#FF0000~Arial~~~~~comment~GND IN~1~start~gge3~0",
+    "LIB~600~200~package`LED-TH_BD3.0-P2.54-FD`BOM_Manufacturer``BOM_Manufacturer Part``BOM_Supplier Part``BOM_Supplier``link``spicePre`D`spiceSymbolName`LED`~~0~gge4~0~D1~LED 12V~270~#@$T~N~620~200~0~#0000FF~Arial~~~~~comment~LED Indicador~1~start~gge5~0",
+    "LIB~500~200~package`R_AXIAL-0.4`BOM_Manufacturer``BOM_Manufacturer Part``BOM_Supplier Part``BOM_Supplier``link``spicePre`R`spiceSymbolName`R`~~0~gge6~0~R1~470Ω~0~#@$T~N~500~180~0~#0000FF~Arial~~~~~comment~Resistencia LED~1~middle~gge7~0",
+    "LIB~500~340~package`SOL-TH`BOM_Manufacturer``BOM_Manufacturer Part``BOM_Supplier Part``BOM_Supplier``link``spicePre`L`spiceSymbolName`SOLENOID`~~0~gge8~0~SOL1~12V 2A~0~#@$T~N~500~310~0~#0000FF~Arial~~~~~comment~Solenoide Motor~1~middle~gge9~0",
+    "LIB~580~340~package`D_DO-41`BOM_Manufacturer``BOM_Manufacturer Part``BOM_Supplier Part``BOM_Supplier``link``spicePre`D`spiceSymbolName`1N4007`~~0~gge10~90~D2~1N4007~90~#@$T~N~600~340~0~#00AA00~Arial~~~~~comment~Diodo Flyback~1~start~gge11~0",
+    "LIB~400~340~package`FUSE_6x30mm`BOM_Manufacturer``BOM_Manufacturer Part``BOM_Supplier Part``BOM_Supplier``link``spicePre`F`spiceSymbolName`FUSE`~~0~gge12~0~F1~3A~0~#@$T~N~400~320~0~#FF8800~Arial~~~~~comment~Fusible Protección~1~middle~gge13~0",
+    "W~320~250~400~250~400~200~440~200~gge14~0~#000000~1~0~none~gge15~0",
+    "W~560~200~600~200~600~250~gge16~0~#000000~1~0~none~gge17~0",
+    "W~320~270~360~270~360~400~600~400~600~370~gge18~0~#000000~1~0~none~gge19~0",
+    "W~400~250~400~300~430~300~430~340~gge20~0~#000000~1~0~none~gge21~0",
+    "W~570~340~600~340~600~400~gge22~0~#000000~1~0~none~gge23~0",
+    "W~580~310~580~250~600~250~gge24~0~#000000~1~0~none~gge25~0"
+  ],
+  "BBox": {
+    "x": 300,
+    "y": 150,
+    "width": 350,
+    "height": 300
+  },
+  "colors": {
+    "track": "#000000",
+    "text": "#0000FF",
+    "component": "#FF0000"
+  }
+}
