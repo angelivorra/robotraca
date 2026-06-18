@@ -1,281 +1,240 @@
-/**
- * ROBOTRACA 8-BIT PLAYER
- * Super Nintendo Style Video Player
- */
+import { SONGS }                         from './config.js';
+import { AudioEngine }                   from './audio-engine.js';
+import { Visualizer }                    from './visualizer.js';
+import { SubtitleEngine }                from './subtitles.js';
+import { loadSongAssets }                from './loader.js';
+import { computeReactiveData, resetSmoothing } from './audio-reactive.js';
 
-// ========================================
-// CONFIGURACIÓN - Edita estos datos
-// ========================================
+// ── DOM references ──────────────────────────────────────────────────────────
+const mainScreen      = document.getElementById('mainScreen');
+const playerScreen    = document.getElementById('playerScreen');
+const songListEl      = document.getElementById('songList');
+const threeCanvas     = document.getElementById('threeCanvas');
+const subtitleDisplay = document.getElementById('subtitleDisplay');
+const loadingOverlay  = document.getElementById('loadingOverlay');
+const loadingBar      = document.getElementById('loadingBar');
+const beatFlash       = document.getElementById('beatFlash');
+const btnBack         = document.getElementById('btnBack');
+const btnPlay         = document.getElementById('btnPlay');
+const btnPrev         = document.getElementById('btnPrev');
+const btnNext         = document.getElementById('btnNext');
+const playIcon        = document.getElementById('playIcon');
 
-const SONGS = [
-    {
-        id: 1,
-        title: "ESTO ES UNA ABDUCCION",
-        video: "videos/abduccion.mp4",
-        image: "img/abduccion.png",
-        duration: "1:18"
-    },
-    {
-        id: 2,
-        title: "ME QUEDO SIN ENERGIA",
-        video: "videos/energia.mp4",
-        image: "img/energia.png",
-        duration: "1:44"
-    },
-    {
-        id: 3,
-        title: "QUE TONTOS SON",
-        video: "videos/tontos.mp4",
-        image: "img/tontos.png",
-        duration: "1:37"
-    },
-    {
-        id: 4,
-        title: "SARTENAZOS DE PLUTON",
-        video: "videos/sarten.mp4",
-        image: "img/sarten.png",
-        duration: "2:04"
-    }
-];
+// ── State ───────────────────────────────────────────────────────────────────
+let currentIndex = -1;
+let isPlaying    = false;
+let audioEngine  = null;
+let visualizer   = null;
+let subtitleEng  = null;
 
-// ========================================
-// ESTADO
-// ========================================
-
-let currentSongIndex = -1;
-let isPlaying = false;
-
-// DOM Elements
-const mainScreen = document.getElementById('mainScreen');
-const playerScreen = document.getElementById('playerScreen');
-const songList = document.getElementById('songList');
-const playerBg = document.getElementById('playerBg');
-const videoPlayer = document.getElementById('videoPlayer');
-
-const btnBack = document.getElementById('btnBack');
-const btnPlay = document.getElementById('btnPlay');
-const btnPrev = document.getElementById('btnPrev');
-const btnNext = document.getElementById('btnNext');
-const playIcon = document.getElementById('playIcon');
-
-// ========================================
-// INICIALIZACIÓN
-// ========================================
-
+// ── Boot ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     generateSongList();
-    initializeEventListeners();
+    initEventListeners();
 });
 
 function generateSongList() {
-    songList.innerHTML = '';
-    
-    SONGS.forEach((song, index) => {
-        const item = document.createElement('button');
-        item.className = 'song-item';
-        item.dataset.index = index;
-        item.setAttribute('role', 'listitem');
-        item.innerHTML = `
-            <span class="song-number">${String(index + 1).padStart(2, '0')}</span>
+    songListEl.innerHTML = '';
+    SONGS.forEach((song, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'song-item';
+        btn.dataset.index = i;
+        btn.setAttribute('role', 'listitem');
+        btn.innerHTML = `
+            <span class="song-number">${String(i + 1).padStart(2, '0')}</span>
             <span class="song-title">${song.title}</span>
             <span class="song-arrow">▶</span>
         `;
-        
-        item.addEventListener('click', () => selectSong(index));
-        songList.appendChild(item);
+        btn.addEventListener('click', () => selectSong(i));
+        songListEl.appendChild(btn);
     });
 }
 
-function initializeEventListeners() {
-    // Botones
+function initEventListeners() {
     btnBack.addEventListener('click', goBack);
     btnPlay.addEventListener('click', togglePlay);
     btnPrev.addEventListener('click', prevSong);
     btnNext.addEventListener('click', nextSong);
-    
-    // Video events
-    videoPlayer.addEventListener('play', () => updatePlayState(true));
-    videoPlayer.addEventListener('pause', () => updatePlayState(false));
-    videoPlayer.addEventListener('ended', handleEnded);
-    
-    // Keyboard controls
+
     document.addEventListener('keydown', handleKeyboard);
-    
-    // Fullscreen change
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+    // Prevent double-tap zoom (canvas touch events are handled by TouchInput)
+    document.addEventListener('touchend', e => {
+        const now = Date.now();
+        if (now - (window.lastTouchEnd || 0) < 300) e.preventDefault();
+        window.lastTouchEnd = now;
+    }, { passive: false });
 }
 
-// ========================================
-// NAVEGACIÓN
-// ========================================
+// ── Song selection & loading ─────────────────────────────────────────────────
 
-function selectSong(index) {
-    currentSongIndex = index;
-    const song = SONGS[index];
-    
-    // Cargar imagen de fondo
-    playerBg.style.backgroundImage = `url('${song.image}')`;
-    
-    // Cargar video
-    videoPlayer.src = song.video;
-    videoPlayer.load();
-    
-    // Resetear estado
-    isPlaying = false;
-    updatePlayButton();
-    
-    // Mostrar player screen
+async function selectSong(index) {
+    _teardown();
+
+    currentIndex = index;
+    const song   = SONGS[index];
+
+    // Switch to player screen with loading overlay
     mainScreen.classList.add('hidden');
     playerScreen.classList.remove('hidden');
+    playerScreen.classList.remove('playing');
+    loadingOverlay.style.display = 'flex';
+    loadingBar.style.width = '0%';
+    loadingBar.style.transition = 'none';
+    subtitleDisplay.textContent = '';
+    _setPlayIcon(false);
+
+    // Preload all assets in parallel
+    let assets;
+    try {
+        assets = await loadSongAssets(song, progress => {
+            loadingBar.style.transition = 'width 0.2s ease';
+            loadingBar.style.width = `${Math.round(progress * 100)}%`;
+        });
+    } catch (err) {
+        console.error('Asset load error:', err);
+        loadingOverlay.innerHTML = '<p class="loading-text">ERROR CARGANDO</p>';
+        return;
+    }
+
+    // Init audio (AudioContext created here — triggered by user gesture)
+    audioEngine = new AudioEngine();
+    await audioEngine.init();
+
+    if (!assets.audioBuffer) {
+        loadingOverlay.innerHTML = '<p class="loading-text">AUDIO NO ENCONTRADO</p>';
+        return;
+    }
+
+    // Decode audio (requires AudioContext, not a gesture)
+    await audioEngine.loadBuffer(assets.audioBuffer);
+
+    // Init subtitles
+    subtitleEng = new SubtitleEngine();
+    if (assets.subtitleText) subtitleEng.parse(assets.subtitleText);
+
+    // Init Three.js scene (static, not animating yet)
+    resetSmoothing();
+    visualizer = new Visualizer(threeCanvas);
+    visualizer.init(song, assets, audioEngine, subtitleEng, computeReactiveData);
+
+    visualizer.onSubtitleUpdate = cue => {
+        subtitleDisplay.textContent = cue || '';
+    };
+    visualizer.onBeat = () => {
+        beatFlash.classList.add('active');
+        requestAnimationFrame(() => beatFlash.classList.remove('active'));
+    };
+    visualizer.onNavigationSwipe = dir => {
+        dir === 'left' ? nextSong() : prevSong();
+    };
+
+    // Render one static frame so the model is visible before play
+    visualizer.renderStatic();
+
+    // Hide loading
+    loadingOverlay.style.display = 'none';
+    _setPlayIcon(false);
 }
+
+// ── Playback ─────────────────────────────────────────────────────────────────
+
+async function togglePlay() {
+    if (!audioEngine) return;
+    isPlaying ? pause() : await play();
+}
+
+async function play() {
+    if (!audioEngine || !audioEngine.buffer) return;
+
+    // iOS: resume suspended AudioContext (requires user gesture — we're in a click handler)
+    await audioEngine.resume();
+
+    const offset = audioEngine.pauseTime || 0;
+    const source = audioEngine.play(offset);
+
+    source.onended = () => {
+        // Only auto-advance if audio engine itself ended (not a manual pause/stop)
+        if (!audioEngine || !audioEngine.isPlaying) return;
+        _handleEnded();
+    };
+
+    visualizer.start();
+    isPlaying = true;
+    _setPlayIcon(true);
+    playerScreen.classList.add('playing');
+}
+
+function pause() {
+    if (!audioEngine) return;
+    audioEngine.pause();   // sets audioEngine.isPlaying = false before source.stop()
+    isPlaying = false;
+    visualizer.stop();
+    _setPlayIcon(false);
+    playerScreen.classList.remove('playing');
+}
+
+function _handleEnded() {
+    isPlaying = false;
+    visualizer.stop();
+    _setPlayIcon(false);
+    playerScreen.classList.remove('playing');
+
+    // Auto-advance to next song
+    const next = currentIndex < SONGS.length - 1 ? currentIndex + 1 : 0;
+    selectSong(next).then(() => play());
+}
+
+function _teardown() {
+    if (isPlaying) {
+        isPlaying = false;
+        audioEngine?.stop();
+        visualizer?.stop();
+    }
+    audioEngine?.dispose();
+    visualizer?.dispose();
+    audioEngine = null;
+    visualizer  = null;
+    subtitleEng = null;
+    playerScreen.classList.remove('playing');
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
 
 function goBack() {
-    // Pausar y resetear
-    videoPlayer.pause();
-    videoPlayer.currentTime = 0;
-    exitFullscreen();
-    
-    isPlaying = false;
-    updatePlayButton();
-    
-    // Volver al menú
+    _teardown();
+    subtitleDisplay.textContent = '';
+    _setPlayIcon(false);
     playerScreen.classList.add('hidden');
     mainScreen.classList.remove('hidden');
-}
-
-// ========================================
-// CONTROLES DE REPRODUCCIÓN
-// ========================================
-
-function togglePlay() {
-    if (isPlaying) {
-        videoPlayer.pause();
-    } else {
-        videoPlayer.play();
-    }
-}
-
-// Click en el video para pausar y mostrar controles
-videoPlayer.addEventListener('click', (e) => {
-    if (isPlaying) {
-        videoPlayer.pause();
-    }
-});
-
-function updatePlayState(playing) {
-    isPlaying = playing;
-    updatePlayButton();
-    
-    if (playing) {
-        playerScreen.classList.add('playing');
-    } else {
-        playerScreen.classList.remove('playing');
-    }
-}
-
-function updatePlayButton() {
-    playIcon.textContent = isPlaying ? '❚❚' : '▶';
+    currentIndex = -1;
 }
 
 function prevSong() {
-    if (currentSongIndex < 0) return;
-    
+    if (currentIndex < 0) return;
+    const prev       = currentIndex > 0 ? currentIndex - 1 : SONGS.length - 1;
     const wasPlaying = isPlaying;
-    const wasFullscreen = isInFullscreen();
-    
-    const prevIndex = currentSongIndex > 0 
-        ? currentSongIndex - 1 
-        : SONGS.length - 1;
-    
-    selectSong(prevIndex);
-    
-    // Continuar reproduciendo si estaba reproduciendo
-    if (wasPlaying) {
-        videoPlayer.play();
-        if (wasFullscreen) {
-            setTimeout(() => enterFullscreen(), 100);
-        }
-    }
+    selectSong(prev).then(() => { if (wasPlaying) play(); });
 }
 
 function nextSong() {
-    if (currentSongIndex < 0) return;
-    
+    if (currentIndex < 0) return;
+    const next       = currentIndex < SONGS.length - 1 ? currentIndex + 1 : 0;
     const wasPlaying = isPlaying;
-    const wasFullscreen = isInFullscreen();
-    
-    const nextIndex = currentSongIndex < SONGS.length - 1 
-        ? currentSongIndex + 1 
-        : 0;
-    
-    selectSong(nextIndex);
-    
-    // Continuar reproduciendo si estaba reproduciendo
-    if (wasPlaying) {
-        videoPlayer.play();
-        if (wasFullscreen) {
-            setTimeout(() => enterFullscreen(), 100);
-        }
-    }
+    selectSong(next).then(() => { if (wasPlaying) play(); });
 }
 
-function handleEnded() {
-    // Auto-siguiente
-    nextSong();
-    // Continuar reproduciendo
-    videoPlayer.play();
+// ── UI helpers ────────────────────────────────────────────────────────────────
+
+function _setPlayIcon(playing) {
+    playIcon.textContent = playing ? '❚❚' : '▶';
 }
 
-// ========================================
-// FULLSCREEN
-// ========================================
-
-function enterFullscreen() {
-    if (videoPlayer.requestFullscreen) {
-        videoPlayer.requestFullscreen();
-    } else if (videoPlayer.webkitRequestFullscreen) {
-        videoPlayer.webkitRequestFullscreen();
-    } else if (videoPlayer.webkitEnterFullscreen) {
-        // iOS Safari
-        videoPlayer.webkitEnterFullscreen();
-    } else if (videoPlayer.msRequestFullscreen) {
-        videoPlayer.msRequestFullscreen();
-    }
-}
-
-function exitFullscreen() {
-    if (isInFullscreen()) {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-    }
-}
-
-function isInFullscreen() {
-    return !!(document.fullscreenElement || document.webkitFullscreenElement);
-}
-
-function handleFullscreenChange() {
-    // Opcional: pausar al salir de fullscreen
-    // if (!isInFullscreen() && isPlaying) {
-    //     videoPlayer.pause();
-    // }
-}
-
-// ========================================
-// TECLADO
-// ========================================
+// ── Keyboard ─────────────────────────────────────────────────────────────────
 
 function handleKeyboard(e) {
-    // Solo si estamos en player screen
     if (playerScreen.classList.contains('hidden')) return;
-    
-    switch(e.key) {
+    switch (e.key) {
         case ' ':
         case 'Enter':
             e.preventDefault();
@@ -292,16 +251,3 @@ function handleKeyboard(e) {
             break;
     }
 }
-
-// ========================================
-// UTILITIES
-// ========================================
-
-// Prevenir zoom en doble tap
-document.addEventListener('touchend', (event) => {
-    const now = Date.now();
-    if (now - (window.lastTouchEnd || 0) < 300) {
-        event.preventDefault();
-    }
-    window.lastTouchEnd = now;
-}, { passive: false });
