@@ -24,13 +24,25 @@ export class GltfObject {
         model.position.sub(center);
         if (maxDim > 0) model.scale.setScalar(2 / maxDim);
 
-        // Collect meshes for reactive updates
+        // Collect meshes; ensure emissive is set so it reacts to music
+        const primary   = new THREE.Color(theme.primaryColor);
+        const secondary = new THREE.Color(theme.secondaryColor);
+        let meshIdx = 0;
         model.traverse(child => {
-            if (child.isMesh) {
-                child.castShadow    = true;
-                child.receiveShadow = true;
-                this._meshes.push(child);
-            }
+            if (!child.isMesh) return;
+            child.castShadow    = true;
+            child.receiveShadow = true;
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            mats.forEach(m => {
+                if (!m) return;
+                // If the material has no emissive color, assign one from the theme
+                if ('emissive' in m && m.emissive.getHex() === 0) {
+                    m.emissive.copy(meshIdx % 2 === 0 ? primary : secondary);
+                }
+                if ('emissiveIntensity' in m) m.emissiveIntensity = 0.4;
+            });
+            this._meshes.push(child);
+            meshIdx++;
         });
 
         if (this._meshes.length === 0) {
@@ -43,11 +55,12 @@ export class GltfObject {
 
     update(reactive /*, delta */) {
         if (!this._model || !this._theme) return;
-        // Emissive with highs
+        const intensity = 0.3 + reactive.bassEnergy * 1.5 + reactive.highsEnergy * 1.0;
         for (const mesh of this._meshes) {
-            if (mesh.material && 'emissiveIntensity' in mesh.material) {
-                mesh.material.emissiveIntensity = reactive.highsEnergy * 0.8;
-            }
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            mats.forEach(m => {
+                if (m && 'emissiveIntensity' in m) m.emissiveIntensity = intensity;
+            });
         }
     }
 

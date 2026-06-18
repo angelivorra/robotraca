@@ -126,7 +126,11 @@ async function selectSong(index) {
         requestAnimationFrame(() => beatFlash.classList.remove('active'));
     };
     visualizer.onNavigationSwipe = dir => {
-        dir === 'left' ? nextSong() : prevSong();
+        if (dir === 'left') {
+            currentIndex < SONGS.length - 1 ? nextSong() : goBack();
+        } else {
+            currentIndex > 0 ? prevSong() : goBack();
+        }
     };
 
     // Render one static frame so the model is visible before play
@@ -176,13 +180,10 @@ function pause() {
 
 function _handleEnded() {
     isPlaying = false;
-    visualizer.stop();
+    visualizer?.stop();
     _setPlayIcon(false);
     playerScreen.classList.remove('playing');
-
-    // Auto-advance to next song
-    const next = currentIndex < SONGS.length - 1 ? currentIndex + 1 : 0;
-    selectSong(next).then(() => play());
+    goBack();
 }
 
 function _teardown() {
@@ -211,17 +212,15 @@ function goBack() {
 }
 
 function prevSong() {
-    if (currentIndex < 0) return;
-    const prev       = currentIndex > 0 ? currentIndex - 1 : SONGS.length - 1;
+    if (currentIndex <= 0) return;
     const wasPlaying = isPlaying;
-    selectSong(prev).then(() => { if (wasPlaying) play(); });
+    selectSong(currentIndex - 1).then(() => { if (wasPlaying) play(); });
 }
 
 function nextSong() {
-    if (currentIndex < 0) return;
-    const next       = currentIndex < SONGS.length - 1 ? currentIndex + 1 : 0;
+    if (currentIndex >= SONGS.length - 1) return;
     const wasPlaying = isPlaying;
-    selectSong(next).then(() => { if (wasPlaying) play(); });
+    selectSong(currentIndex + 1).then(() => { if (wasPlaying) play(); });
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────

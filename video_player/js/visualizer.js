@@ -78,15 +78,24 @@ export class Visualizer {
         this._threeScene.add(this._modelGroup);
 
         // Shared lights (always present, scene can add its own)
-        this._threeScene.add(new THREE.AmbientLight(0xffffff, 0.3));
-        const l1 = new THREE.PointLight(new THREE.Color(songConfig.theme.primaryColor),   1, 20);
+        this._threeScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+        // Two colored point lights from the sides
+        const l1 = new THREE.PointLight(new THREE.Color(songConfig.theme.primaryColor),   3, 15);
         l1.position.set(-3, 3, 3);
         this._threeScene.add(l1);
-        const l2 = new THREE.PointLight(new THREE.Color(songConfig.theme.secondaryColor), 1, 20);
+        const l2 = new THREE.PointLight(new THREE.Color(songConfig.theme.secondaryColor), 2, 15);
         l2.position.set(3, -2, 4);
         this._threeScene.add(l2);
-        this._light1 = l1;
-        this._light2 = l2;
+
+        // Neutral fill light from the front so the model is always readable
+        const lFill = new THREE.DirectionalLight(0xffffff, 1.0);
+        lFill.position.set(0, 1, 6);
+        this._threeScene.add(lFill);
+
+        this._light1    = l1;
+        this._light2    = l2;
+        this._fillLight = lFill;
 
         // Pick & init scene
         this._sceneList  = songConfig.scenes?.length ? songConfig.scenes : ['space'];
@@ -173,18 +182,10 @@ export class Visualizer {
 
         ti.onSwipe = (dir) => {
             if (dir === 'left' || dir === 'right') {
-                if (this._sceneList.length > 1) {
-                    // Cycle through scenes
-                    this._sceneIndex = (this._sceneIndex + (dir === 'left' ? 1 : -1) + this._sceneList.length) % this._sceneList.length;
-                    this._initScene(this._sceneList[this._sceneIndex]);
-                    this._buildComposer();
-                } else {
-                    // Delegate to scene (e.g. tunnel speed boost)
-                    this._currentScene?.onSwipe?.(dir);
-                    // Also propagate to player for song prev/next
-                    this.onNavigationSwipe?.(dir);
-                }
+                // Always navigate between songs — scenes never cycle
+                this.onNavigationSwipe?.(dir);
             } else {
+                // Up/down delegates to scene (e.g. tunnel speed)
                 this._currentScene?.onSwipe?.(dir);
             }
         };
@@ -233,12 +234,13 @@ export class Visualizer {
             this.onBeat?.();
         }
 
-        // Light reactivity
-        this._light1.intensity = 0.5 + reactive.bassEnergy * 3;
+        // Light reactivity — base values keep the model lit even in silence
+        this._light1.intensity = 2.0 + reactive.bassEnergy * 5;
         const c2 = new THREE.Color(this._theme.secondaryColor);
         c2.lerp(new THREE.Color(this._theme.primaryColor), reactive.midsEnergy * 0.6);
         this._light2.color.copy(c2);
-        this._light2.intensity = 0.5 + reactive.midsEnergy * 2;
+        this._light2.intensity = 1.5 + reactive.midsEnergy * 4;
+        this._fillLight.intensity = 0.8 + reactive.highsEnergy * 2;
 
         // Scene update
         this._currentScene?.update(reactive, delta);

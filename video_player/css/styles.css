@@ -437,9 +437,13 @@ body {
 /* ========================================
    PLAYING STATE
    ======================================== */
-.player-screen.playing .btn-8bit {
+.player-screen.playing .btn-8bit:not(.btn-back) {
     opacity: 0;
     pointer-events: none;
+}
+
+.player-screen.playing .btn-back {
+    opacity: 0.6;
 }
 
 .player-screen .btn-8bit {
