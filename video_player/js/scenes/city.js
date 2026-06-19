@@ -18,7 +18,7 @@ export class CityScene {
         this._beatFlash     = 0;
         this._beatSweep     = 2.0;   // > 1 = inactive; 0→1 = sweep front position
         this._time          = 0;
-        this._useBloom      = !_isMobile();
+        this._useBloom      = false;
         this._theme         = null;
         this._primaryCol    = null;
         this._secondaryCol  = null;
@@ -285,8 +285,4 @@ function _seededRand(seed) {
         s = Math.imul(48271, s) >>> 0;
         return s / 0xffffffff;
     };
-}
-
-function _isMobile() {
-    return navigator.maxTouchPoints > 0 || window.innerWidth < 768;
 }

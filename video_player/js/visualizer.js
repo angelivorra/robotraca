@@ -150,7 +150,7 @@ export class Visualizer {
             this._composer = null;
         }
 
-        if (!this._currentScene?.useBloom || _isMobile()) return;
+        if (!this._currentScene?.useBloom) return;
 
         const size = new THREE.Vector2(window.innerWidth, window.innerHeight);
         this._composer = new EffectComposer(this._renderer);

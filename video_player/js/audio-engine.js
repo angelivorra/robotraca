@@ -16,13 +16,14 @@ export class AudioEngine {
         this.BEAT_COOLDOWN = 200; // ms between beats
     }
 
-    async init() {
+    // Must be called synchronously within a user gesture (iOS requirement).
+    init() {
         this.context = new (window.AudioContext || window.webkitAudioContext)();
         this.analyser = this.context.createAnalyser();
-        this.analyser.fftSize             = 2048;
+        this.analyser.fftSize               = 2048;
         this.analyser.smoothingTimeConstant = 0.8;
-        this.analyser.minDecibels         = -90;
-        this.analyser.maxDecibels         = -10;
+        this.analyser.minDecibels           = -90;
+        this.analyser.maxDecibels           = -10;
         this.analyser.connect(this.context.destination);
         this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
     }

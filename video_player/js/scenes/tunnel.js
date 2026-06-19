@@ -17,7 +17,7 @@ export class TunnelScene {
         this._theme      = null;
         this._speedBoost = 0;
         this._beatFlash  = 0;
-        this._useBloom   = !_isMobile();
+        this._useBloom   = false;
     }
 
     init(threeScene, theme) {
@@ -118,8 +118,4 @@ export class TunnelScene {
         this._rings    = [];
         this._wallMesh = null;
     }
-}
-
-function _isMobile() {
-    return navigator.maxTouchPoints > 0 || window.innerWidth < 768;
 }

@@ -2,8 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ROBOTRACA // 8-BIT PLAYER</title>
+
+    <!-- PWA / Add to Home Screen (iOS + Android) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="apple-mobile-web-app-title" content="ROBOTRACA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f0f1a">
+    <link rel="manifest" href="manifest.json">
+
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 
@@ -34,6 +43,7 @@
 
         <footer class="footer-8bit">
             <span class="blink">► PRESS TO PLAY ◄</span>
+            <span class="version-tag" id="versionTag"></span>
         </footer>
     </div>
 
@@ -78,7 +88,34 @@
         </button>
     </div>
 
+    <!-- Fullscreen button (hidden if Fullscreen API not supported) -->
+    <button id="btnFullscreen" class="btn-fullscreen" aria-label="Pantalla completa" style="display:none">⛶</button>
+
     <!-- Entry point (type=module picks up the importmap) -->
     <script type="module" src="js/player.js"></script>
+    <script>
+        // Fullscreen button — show only if API is available
+        const btnFs = document.getElementById('btnFullscreen');
+        if (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) {
+            btnFs.style.display = 'flex';
+            btnFs.addEventListener('click', () => {
+                const el = document.documentElement;
+                const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+                if (!fsEl) {
+                    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+                    btnFs.textContent = '⊠';
+                } else {
+                    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                    btnFs.textContent = '⛶';
+                }
+            });
+            document.addEventListener('fullscreenchange', () => {
+                btnFs.textContent = document.fullscreenElement ? '⊠' : '⛶';
+            });
+            document.addEventListener('webkitfullscreenchange', () => {
+                btnFs.textContent = document.webkitFullscreenElement ? '⊠' : '⛶';
+            });
+        }
+    </script>
 </body>
 </html>

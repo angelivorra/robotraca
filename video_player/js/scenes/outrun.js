@@ -13,7 +13,6 @@ const TOTAL_Z  = NUM_SEGS * SEG_D;           // ≈ 45.76
 const NUM_TREES = 22;     // per side
 const NUM_CARS  =  5;
 const LANE_X    =  ROAD_W / 4;    // 1.5 — centre of each lane
-const NUM_BIRDS =  7;
 
 const ROAD_COLS   = ['#3c3c3c', '#4a4a4a'];
 const GRASS_COLS  = ['#007722', '#00aa33'];
@@ -27,7 +26,7 @@ export class OutrunScene {
         this._time       = 0;
         this._speedBoost = 0;
         this._beatFlash  = 0;
-        this._useBloom   = !_isMobile();
+        this._useBloom   = false;
         this._theme      = null;
 
         this._segs       = [];
@@ -35,7 +34,6 @@ export class OutrunScene {
         this._treesR     = [];
         this._glitters   = [];
         this._cars       = [];
-        this._birds      = [];
 
         this._curveDrift  = 0;
         this._curveTarget = 0;
@@ -57,7 +55,6 @@ export class OutrunScene {
         _buildTrees(this._group, this._treesL, -1);
         _buildTrees(this._group, this._treesR,  1);
         _buildCars(this._group, this._cars);
-        _buildBirds(this._group, this._birds);
     }
 
     update(reactive, delta) {
@@ -123,16 +120,6 @@ export class OutrunScene {
             car.group.position.x = car.lane * LANE_X + this._curveDrift * t;
         }
 
-        // ── Birds ─────────────────────────────────────────────────────────────
-        for (const b of this._birds) {
-            b.x += b.dx * delta;
-            if (b.x >  50) b.x = -50;
-            if (b.x < -50) b.x =  50;
-            b.group.position.x = b.x;
-            const flap = Math.sin(this._time * b.flapSpeed + b.flapPhase) * 0.45;
-            b.wingL.rotation.z =  0.22 + flap;
-            b.wingR.rotation.z = -0.22 - flap;
-        }
     }
 
     onBeat()  { this._beatFlash = 3.5; this._speedBoost += 0.14; }
@@ -156,7 +143,6 @@ export class OutrunScene {
         this._treesR   = [];
         this._glitters = [];
         this._cars     = [];
-        this._birds    = [];
     }
 }
 
@@ -417,45 +403,6 @@ function _buildCars(group, cars) {
     }
 }
 
-// ── Birds ─────────────────────────────────────────────────────────────────────
-
-function _buildBirds(group, birds) {
-    const rand    = _seededRand(87);
-    const birdMat = _flat('#150022');   // dark silhouette against sunset sky
-
-    for (let i = 0; i < NUM_BIRDS; i++) {
-        const g     = new THREE.Group();
-        const scale = 0.55 + rand() * 0.55;
-
-        const wingL = new THREE.Mesh(
-            new THREE.BoxGeometry(0.72 * scale, 0.05, 0.10), birdMat);
-        wingL.position.set(-0.38 * scale, 0, 0);
-        g.add(wingL);
-
-        const wingR = new THREE.Mesh(
-            new THREE.BoxGeometry(0.72 * scale, 0.05, 0.10), birdMat);
-        wingR.position.set(0.38 * scale, 0, 0);
-        g.add(wingR);
-
-        // Body
-        _bm(g, 0.15 * scale, 0.07, 0.22 * scale, birdMat, 0, 0, 0);
-
-        const x = (rand() - 0.5) * 50;
-        const y =  1.2 + rand() * 5.5;
-        const z = -6   - rand() * 18;
-
-        g.position.set(x, y, z);
-        group.add(g);
-        birds.push({
-            group: g, wingL, wingR,
-            x,
-            dx:        (rand() - 0.5) * 2.2,
-            flapSpeed: 2.5 + rand() * 4.0,
-            flapPhase: rand() * Math.PI * 2,
-        });
-    }
-}
-
 // ── Utility ───────────────────────────────────────────────────────────────────
 
 function _flat(hex) {
@@ -474,6 +421,3 @@ function _seededRand(seed) {
     return () => { s = Math.imul(48271, s) >>> 0; return s / 0xffffffff; };
 }
 
-function _isMobile() {
-    return navigator.maxTouchPoints > 0 || window.innerWidth < 768;
-}

@@ -20,7 +20,7 @@ export class SpaceshipScene {
         this._speedBoost = 0;
         this._beatFlash  = 0;
         this._time       = 0;
-        this._useBloom   = !_isMobile();
+        this._useBloom   = false;
         this._theme      = null;
     }
 
@@ -355,8 +355,4 @@ function _mat(hex, roughness, metalness) {
 function _seededRand(seed) {
     let s = seed >>> 0;
     return () => { s = Math.imul(48271, s) >>> 0; return s / 0xffffffff; };
-}
-
-function _isMobile() {
-    return navigator.maxTouchPoints > 0 || window.innerWidth < 768;
 }

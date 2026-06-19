@@ -1,4 +1,4 @@
-import { SONGS }                         from './config.js';
+import { SONGS, VERSION }                 from './config.js';
 import { AudioEngine }                   from './audio-engine.js';
 import { Visualizer }                    from './visualizer.js';
 import { SubtitleEngine }                from './subtitles.js';
@@ -29,6 +29,7 @@ let subtitleEng  = null;
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('versionTag').textContent = `v${VERSION}`;
     generateSongList();
     initEventListeners();
 });
@@ -74,6 +75,12 @@ async function selectSong(index) {
     currentIndex = index;
     const song   = SONGS[index];
 
+    // iOS Safari requires AudioContext to be created synchronously within the
+    // user gesture — before any await. Creating it after an await loses the
+    // gesture context and Safari silently refuses to produce audio.
+    audioEngine = new AudioEngine();
+    audioEngine.init();
+
     // Switch to player screen with loading overlay
     mainScreen.classList.add('hidden');
     playerScreen.classList.remove('hidden');
@@ -96,10 +103,6 @@ async function selectSong(index) {
         loadingOverlay.innerHTML = '<p class="loading-text">ERROR CARGANDO</p>';
         return;
     }
-
-    // Init audio (AudioContext created here — triggered by user gesture)
-    audioEngine = new AudioEngine();
-    await audioEngine.init();
 
     if (!assets.audioBuffer) {
         loadingOverlay.innerHTML = '<p class="loading-text">AUDIO NO ENCONTRADO</p>';
