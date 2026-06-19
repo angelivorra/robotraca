@@ -14,6 +14,8 @@ export class AudioEngine {
         this.energyIndex   = 0;
         this.lastBeatTime  = 0;
         this.BEAT_COOLDOWN = 200; // ms between beats
+
+        this._silentEl  = null;   // keeps Web Audio on the media channel (iOS silent-switch fix)
     }
 
     // Must be called synchronously within a user gesture (iOS requirement).
@@ -39,7 +41,24 @@ export class AudioEngine {
         }
     }
 
+    // iOS routes Web Audio through the ringer/ambient channel, so the hardware
+    // silent switch mutes it even at full volume. Playing a looping silent
+    // HTMLAudioElement within the same user gesture moves Web Audio onto the
+    // media channel where it behaves like any other audio app.
+    _unlockMediaChannel() {
+        if (this._silentEl) return;
+        const a = document.createElement('audio');
+        a.setAttribute('x-webkit-airplay', 'deny');
+        a.loop   = true;
+        a.volume = 0;
+        // Minimal valid silent WAV (0 samples, 44100 Hz mono 16-bit)
+        a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        a.play().catch(() => {});
+        this._silentEl = a;
+    }
+
     play(offset = 0) {
+        this._unlockMediaChannel();
         if (this.source) {
             this.source.disconnect();
             this.source = null;
@@ -136,6 +155,11 @@ export class AudioEngine {
 
     dispose() {
         this.stop();
+        if (this._silentEl) {
+            this._silentEl.pause();
+            this._silentEl.src = '';
+            this._silentEl = null;
+        }
         if (this.context) {
             this.context.close();
             this.context = null;

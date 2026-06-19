@@ -59,6 +59,14 @@ function initEventListeners() {
 
     document.addEventListener('keydown', handleKeyboard);
 
+    // iOS suspends AudioContext when the app is backgrounded (home screen, lock,
+    // notification centre). Re-resume it the moment the user comes back.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && audioEngine) {
+            audioEngine.resume();
+        }
+    });
+
     // Prevent double-tap zoom (canvas touch events are handled by TouchInput)
     document.addEventListener('touchend', e => {
         const now = Date.now();
