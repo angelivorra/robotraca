@@ -16,8 +16,13 @@ export class CityScene {
         this._centerLineMat = null;
         this._speedBoost    = 0;
         this._beatFlash     = 0;
+        this._beatSweep     = 2.0;   // > 1 = inactive; 0→1 = sweep front position
+        this._time          = 0;
         this._useBloom      = !_isMobile();
         this._theme         = null;
+        this._primaryCol    = null;
+        this._secondaryCol  = null;
+        this._white         = new THREE.Color(1, 1, 1);
     }
 
     init(threeScene, theme) {
@@ -30,6 +35,9 @@ export class CityScene {
 
         this._buildFloor(theme);
         this._buildCity(theme);
+
+        this._primaryCol   = new THREE.Color(theme.primaryColor);
+        this._secondaryCol = new THREE.Color(theme.secondaryColor);
     }
 
     // ── Floor & road markings ────────────────────────────────────────────────
@@ -93,8 +101,11 @@ export class CityScene {
                 const h    = 2.0  + rand() * 7.5;
                 const w    = 1.3  + rand() * 1.8;
                 const d    = 0.9  + rand() * 1.8;
-                const xVar = rand() * 1.2;           // slight x offset for variety
+                const xVar = rand() * 1.2;
                 const bx   = side * (BLDG_LANE_X + w / 2 + xVar);
+
+                // Deterministic per-building phase offset (no rand() consumed)
+                const bPhase = (i * 2.399 + side * 1.618) % (Math.PI * 2);
 
                 // ── Body ──────────────────────────────────────────
                 const body = new THREE.Mesh(
@@ -112,7 +123,8 @@ export class CityScene {
                 const numStrips = Math.max(1, Math.floor(h / 1.1));
 
                 for (let s = 0; s < numStrips; s++) {
-                    const sy   = (s + 0.5) * (h / numStrips) + 0.1;
+                    const sy    = (s + 0.5) * (h / numStrips) + 0.1;
+                    const syN   = (s + 0.5) / numStrips;   // 0=bottom, 1=top (normalised)
                     const strip = new THREE.Mesh(
                         new THREE.BoxGeometry(w + 0.06, 0.04, d + 0.06),
                         new THREE.MeshStandardMaterial({
@@ -122,7 +134,7 @@ export class CityScene {
                     );
                     strip.position.set(bx, sy, 0);
                     rowGroup.add(strip);
-                    reactive.push(strip);
+                    reactive.push({ mesh: strip, sy: syN, bPhase, type: 'strip', col: neonColor.clone() });
                 }
 
                 // ── Vertical edge neon lines ───────────────────────
@@ -137,7 +149,7 @@ export class CityScene {
                     );
                     edge.position.set(bx + ex, h / 2, d / 2);
                     rowGroup.add(edge);
-                    reactive.push(edge);
+                    reactive.push({ mesh: edge, sy: 0.5, bPhase, type: 'edge', col: neonColor.clone() });
                 }
 
                 // ── Street light (every 3 rows) ────────────────────
@@ -159,7 +171,7 @@ export class CityScene {
                     );
                     lamp.position.set(side * (ROAD_HALF_W + 0.5), 2.9, d / 2);
                     rowGroup.add(lamp);
-                    reactive.push(lamp);
+                    reactive.push({ mesh: lamp, sy: 0.5, bPhase, type: 'lamp', col: lampColor });
                 }
 
                 // ── Neon rooftop accent ────────────────────────────
@@ -173,7 +185,7 @@ export class CityScene {
                 );
                 roof.position.set(bx, h + 0.03, 0);
                 rowGroup.add(roof);
-                reactive.push(roof);
+                reactive.push({ mesh: roof, sy: 1.0, bPhase, type: 'roof', col: roofColor.clone() });
             }
 
             this._group.add(rowGroup);
@@ -183,29 +195,72 @@ export class CityScene {
 
     // ── Per-frame update ──────────────────────────────────────────────────────
 
-    update(reactive /*, delta */) {
+    update(reactive, delta) {
         this._speedBoost *= 0.96;
-        const speed = 0.05 + reactive.bassEnergy * 0.22 + this._speedBoost;
+        this._time       += delta;
+        // Beat sweep front travels 0→1 (bottom→top) in ~0.14 s
+        this._beatSweep  += delta * 7.2;
+        this._beatFlash  *= 0.87;
 
-        // Animated center line (feels like road rushing toward you)
+        const t     = this._time;
+        const bass  = reactive.bassEnergy;
+        const mids  = reactive.midsEnergy;
+        const speed = 0.05 + bass * 0.22 + this._speedBoost;
+
         if (this._centerLineMat) this._centerLineMat.dashOffset -= speed * 0.4;
 
-        this._beatFlash *= 0.87;
-        const emissive = 0.5 + reactive.bassEnergy * 1.5 + this._beatFlash;
-        // Color shift on mids
-        const colorMix = reactive.midsEnergy * 0.4;
+        const sweepActive = this._beatSweep < 1.0;
 
         for (const { group, reactive: meshes } of this._rows) {
             group.position.z += speed;
             if (group.position.z > WRAP_Z) group.position.z -= TOTAL_Z;
 
-            for (const mesh of meshes) {
-                mesh.material.emissiveIntensity = emissive;
-                // Slight color mix between primary/secondary with mids
-                const base = mesh.material.emissive.clone();
-                const alt  = new THREE.Color(this._theme.secondaryColor);
-                base.lerp(alt, colorMix);
-                mesh.material.emissive.copy(base);
+            for (const el of meshes) {
+                const { mesh, sy, bPhase, type, col } = el;
+
+                // ── Scan line: sharp bright front that travels bottom→top per building ──
+                // Speed scales with bass so it feels synced to the music
+                const scanPos  = ((t * (1.0 + bass * 2.2) + bPhase * 0.16) % 1.0);
+                const scanDist = Math.abs(sy - scanPos);
+                const scan     = Math.max(0, 1.0 - scanDist * 9) * 3.2;
+
+                // ── Beat sweep: fast wave from bottom on every beat ────────────────────
+                const sweepDist = sweepActive ? Math.abs(sy - this._beatSweep) : 2;
+                const sweep     = Math.max(0, 1.0 - sweepDist * 14) * 5.0;
+
+                let intensity, colorMix;
+
+                if (type === 'strip') {
+                    // Chase wave: runs from bottom to top continuously (Tron running lights)
+                    const wave = (Math.sin(t * 6.0 - sy * Math.PI * 3.0 + bPhase) + 1) * 0.5;
+                    intensity  = 0.06 + wave * 1.8 + bass * 1.4 + scan + sweep
+                               + this._beatFlash * (0.3 + sy * 0.7);
+                    // Color cycles from primary → secondary along building height over time
+                    colorMix   = (Math.sin(t * 0.9 + sy * Math.PI + bPhase * 0.5) + 1) * 0.5;
+                    colorMix   = Math.min(1, colorMix * (0.4 + mids * 0.8));
+                    mesh.material.emissive.lerpColors(this._primaryCol, this._secondaryCol, colorMix);
+
+                } else if (type === 'edge') {
+                    // Whole-building pulse, stronger on beat
+                    const pulse = (Math.sin(t * 4.5 + bPhase) + 1) * 0.5;
+                    intensity   = 0.12 + pulse * 2.2 + bass * 2.0 + sweep * 0.5
+                                + this._beatFlash * 0.6;
+                    // Edges keep their identity color, just flash white on beat
+                    mesh.material.emissive.lerpColors(col, this._white,
+                        Math.min(0.9, this._beatFlash * 0.15));
+
+                } else if (type === 'roof') {
+                    // Rooftops strobe on beat, cycle colors fast
+                    intensity = 0.3 + bass * 2.8 + this._beatFlash * 1.4 + scan * 0.2;
+                    colorMix  = (Math.sin(t * 2.8 + bPhase) + 1) * 0.5;
+                    mesh.material.emissive.lerpColors(this._primaryCol, this._secondaryCol, colorMix);
+
+                } else {  // lamp
+                    intensity = 0.8 + bass * 2.2 + this._beatFlash * 0.6;
+                    mesh.material.emissive.copy(col);
+                }
+
+                mesh.material.emissiveIntensity = Math.min(5.5, intensity);
             }
         }
     }
@@ -216,7 +271,7 @@ export class CityScene {
     }
 
     onTap()  { this._beatFlash = 2.5; }
-    onBeat() { this._beatFlash = 3.8; }
+    onBeat() { this._beatFlash = 3.8; this._beatSweep = 0.0; }
 
     // ── Cleanup ───────────────────────────────────────────────────────────────
 

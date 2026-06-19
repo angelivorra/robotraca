@@ -73,15 +73,17 @@ export const SONGS = [
         coverArt:  'img/sarten.png',
         background: null,
 
-        scenes:  ['city', 'tunnel', 'apocalypse', 'jungle'],
-        objects: ['songs/sarten/model.glb', 'icosahedron', 'torus-knot'],
+        scenes:  ['outrun'],
+        objects: ['songs/sarten/model.glb'],
 
         theme: {
             bgColor:        '#1a0500',
             primaryColor:   '#ff4500',
             secondaryColor: '#00d4ff',
-            modelBaseScale: 1.0,
+            modelBaseScale: 1.3,
             cameraDistance: 5,
+            modelEmissive:  false,
+            modelPosition:  [0, 1.6, 0],
         }
     }
 ];
