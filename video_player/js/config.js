@@ -15,9 +15,10 @@ export const SONGS = [
             bgColor:        '#050010',
             primaryColor:   '#e94560',
             secondaryColor: '#16c79a',
-            modelBaseScale: 1.5,
+            modelBaseScale: 1,
             cameraDistance: 5,
             modelEmissive:  false,
+            modelPosition:  [0, 1.3, 0],
         }
     },
     {

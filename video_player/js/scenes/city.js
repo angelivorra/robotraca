@@ -198,14 +198,13 @@ export class CityScene {
     update(reactive, delta) {
         this._speedBoost *= 0.96;
         this._time       += delta;
-        // Beat sweep front travels 0→1 (bottom→top) in ~0.14 s
         this._beatSweep  += delta * 7.2;
-        this._beatFlash  *= 0.87;
+        // Delta-correct decay: at 60fps ≈ 0.82 per frame → near-zero within ~1 beat
+        this._beatFlash  *= Math.pow(0.82, delta * 60);
 
         const t     = this._time;
-        const bass  = reactive.bassEnergy;
-        const mids  = reactive.midsEnergy;
-        const speed = 0.05 + bass * 0.22 + this._speedBoost;
+        const bf    = this._beatFlash;
+        const speed = 0.06 + reactive.bassEnergy * 0.08 + this._speedBoost;
 
         if (this._centerLineMat) this._centerLineMat.dashOffset -= speed * 0.4;
 
@@ -218,45 +217,35 @@ export class CityScene {
             for (const el of meshes) {
                 const { mesh, sy, bPhase, type, col } = el;
 
-                // ── Scan line: sharp bright front that travels bottom→top per building ──
-                // Speed scales with bass so it feels synced to the music
-                const scanPos  = ((t * (1.0 + bass * 2.2) + bPhase * 0.16) % 1.0);
-                const scanDist = Math.abs(sy - scanPos);
-                const scan     = Math.max(0, 1.0 - scanDist * 9) * 3.2;
+                // Scan line: steady time-based, no energy dependency
+                const scan = Math.max(0, 1.0 - Math.abs(sy - ((t * 1.5 + bPhase * 0.16) % 1.0)) * 9) * 1.4;
 
-                // ── Beat sweep: fast wave from bottom on every beat ────────────────────
+                // Beat sweep: bright front racing from bottom on every beat
                 const sweepDist = sweepActive ? Math.abs(sy - this._beatSweep) : 2;
                 const sweep     = Math.max(0, 1.0 - sweepDist * 14) * 5.0;
 
-                let intensity, colorMix;
+                let intensity;
 
                 if (type === 'strip') {
-                    // Chase wave: runs from bottom to top continuously (Tron running lights)
-                    const wave = (Math.sin(t * 6.0 - sy * Math.PI * 3.0 + bPhase) + 1) * 0.5;
-                    intensity  = 0.06 + wave * 1.8 + bass * 1.4 + scan + sweep
-                               + this._beatFlash * (0.3 + sy * 0.7);
-                    // Color cycles from primary → secondary along building height over time
-                    colorMix   = (Math.sin(t * 0.9 + sy * Math.PI + bPhase * 0.5) + 1) * 0.5;
-                    colorMix   = Math.min(1, colorMix * (0.4 + mids * 0.8));
-                    mesh.material.emissive.lerpColors(this._primaryCol, this._secondaryCol, colorMix);
+                    // Subtle background wave + beat flash as the dominant light source
+                    const wave = (Math.sin(t * 5.0 - sy * Math.PI * 3.0 + bPhase) + 1) * 0.5;
+                    intensity  = 0.05 + wave * 0.45 + scan + sweep + bf * (1.2 + sy * 2.2);
+                    const colorMix = (Math.sin(t * 0.8 + sy * Math.PI + bPhase * 0.5) + 1) * 0.5;
+                    mesh.material.emissive.lerpColors(
+                        this._primaryCol, this._secondaryCol, colorMix * (0.5 + bf * 0.07));
 
                 } else if (type === 'edge') {
-                    // Whole-building pulse, stronger on beat
-                    const pulse = (Math.sin(t * 4.5 + bPhase) + 1) * 0.5;
-                    intensity   = 0.12 + pulse * 2.2 + bass * 2.0 + sweep * 0.5
-                                + this._beatFlash * 0.6;
-                    // Edges keep their identity color, just flash white on beat
-                    mesh.material.emissive.lerpColors(col, this._white,
-                        Math.min(0.9, this._beatFlash * 0.15));
+                    const pulse = (Math.sin(t * 3.5 + bPhase) + 1) * 0.5;
+                    intensity   = 0.06 + pulse * 0.35 + sweep * 0.4 + bf * 1.6;
+                    mesh.material.emissive.lerpColors(col, this._white, Math.min(0.85, bf * 0.18));
 
                 } else if (type === 'roof') {
-                    // Rooftops strobe on beat, cycle colors fast
-                    intensity = 0.3 + bass * 2.8 + this._beatFlash * 1.4 + scan * 0.2;
-                    colorMix  = (Math.sin(t * 2.8 + bPhase) + 1) * 0.5;
+                    intensity = 0.12 + sweep * 0.25 + bf * 2.8;
+                    const colorMix = (Math.sin(t * 2.5 + bPhase) + 1) * 0.5;
                     mesh.material.emissive.lerpColors(this._primaryCol, this._secondaryCol, colorMix);
 
                 } else {  // lamp
-                    intensity = 0.8 + bass * 2.2 + this._beatFlash * 0.6;
+                    intensity = 0.35 + bf * 2.0;
                     mesh.material.emissive.copy(col);
                 }
 
@@ -270,8 +259,8 @@ export class CityScene {
         if (dir === 'right') this._speedBoost = Math.max(0, this._speedBoost - 0.12);
     }
 
-    onTap()  { this._beatFlash = 2.5; }
-    onBeat() { this._beatFlash = 3.8; this._beatSweep = 0.0; }
+    onTap()  { this._beatFlash = 2.5; this._beatSweep = 0.0; }
+    onBeat() { this._beatFlash = 5.0; this._beatSweep = 0.0; }
 
     // ── Cleanup ───────────────────────────────────────────────────────────────
 
