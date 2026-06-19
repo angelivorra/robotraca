@@ -139,5 +139,8 @@ export class AudioEngine {
             this.context.close();
             this.context = null;
         }
+        this.buffer        = null;
+        this.analyser      = null;
+        this.frequencyData = null;
     }
 }

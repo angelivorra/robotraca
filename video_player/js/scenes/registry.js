@@ -3,6 +3,7 @@ import { SpaceScene }       from './space.js';
 import { CityScene }        from './city.js';
 import { SpaceshipScene }   from './spaceship.js';
 import { ApocalypseScene }  from './apocalypse.js';
+import { JungleScene }      from './jungle.js';
 
 const REGISTRY = {
     tunnel:     TunnelScene,
@@ -10,6 +11,7 @@ const REGISTRY = {
     city:       CityScene,
     spaceship:  SpaceshipScene,
     apocalypse: ApocalypseScene,
+    jungle:     JungleScene,
 };
 
 export function createScene(name) {

@@ -8,15 +8,16 @@ export const SONGS = [
         coverArt:  'img/abduccion.png',
         background: null,
 
-        scenes:  ['tunnel'],
+        scenes:  ['city'],
         objects: ['songs/abduccion/model.glb'],
 
         theme: {
             bgColor:        '#050010',
             primaryColor:   '#e94560',
             secondaryColor: '#16c79a',
-            modelBaseScale: 1.0,
+            modelBaseScale: 1.5,
             cameraDistance: 5,
+            modelEmissive:  false,
         }
     },
     {
@@ -28,8 +29,8 @@ export const SONGS = [
         coverArt:  'img/energia.png',
         background: null,
 
-        scenes:  ['tunnel', 'city', 'space'],
-        objects: ['songs/energia/model.glb', 'icosahedron'],
+        scenes:  ['jungle'],
+        objects: ['songs/energia/model.glb'],
 
         theme: {
             bgColor:        '#000a1a',
@@ -37,6 +38,8 @@ export const SONGS = [
             secondaryColor: '#ffe000',
             modelBaseScale: 1.0,
             cameraDistance: 5,
+            modelEmissive:  false,
+            modelPosition:  [0, 1.6, 0],            
         }
     },
     {
@@ -49,7 +52,7 @@ export const SONGS = [
         background: null,
 
         scenes:  ['apocalypse'],
-        objects: ['songs/tontos/model.glb', 'torus-knot'],
+        objects: ['songs/tontos/model.glb'],
 
         theme: {
             bgColor:        '#001a05',
@@ -70,7 +73,7 @@ export const SONGS = [
         coverArt:  'img/sarten.png',
         background: null,
 
-        scenes:  ['city', 'tunnel', 'apocalypse'],
+        scenes:  ['city', 'tunnel', 'apocalypse', 'jungle'],
         objects: ['songs/sarten/model.glb', 'icosahedron', 'torus-knot'],
 
         theme: {

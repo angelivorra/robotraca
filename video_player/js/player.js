@@ -2,7 +2,7 @@ import { SONGS }                         from './config.js';
 import { AudioEngine }                   from './audio-engine.js';
 import { Visualizer }                    from './visualizer.js';
 import { SubtitleEngine }                from './subtitles.js';
-import { loadSongAssets }                from './loader.js';
+import { loadSongAssets, evictSongAssets } from './loader.js';
 import { computeReactiveData, resetSmoothing } from './audio-reactive.js';
 
 // ── DOM references ──────────────────────────────────────────────────────────
@@ -187,17 +187,25 @@ function _handleEnded() {
 }
 
 function _teardown() {
+    // Capture before currentIndex is changed by the caller
+    const evictId = currentIndex >= 0 ? SONGS[currentIndex]?.id : null;
+
     if (isPlaying) {
         isPlaying = false;
         audioEngine?.stop();
         visualizer?.stop();
     }
+    // Dispose runtime objects first (detaches GLTF model from Three.js scene,
+    // disposes scene geometry, closes AudioContext)
     audioEngine?.dispose();
     visualizer?.dispose();
     audioEngine = null;
     visualizer  = null;
     subtitleEng = null;
     playerScreen.classList.remove('playing');
+
+    // Now safe to free GPU resources and the cached raw audio bytes
+    if (evictId) evictSongAssets(evictId);
 }
 
 // ── Navigation ───────────────────────────────────────────────────────────────

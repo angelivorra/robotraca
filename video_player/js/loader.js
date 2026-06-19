@@ -89,6 +89,32 @@ export async function loadSongAssets(songConfig, onProgress) {
     return assets;
 }
 
+/**
+ * Disposes GPU resources for a song and removes it from the cache.
+ * Safe to call after visualizer.dispose() has detached the GLTF model
+ * from the Three.js scene (GltfObject.dispose removes it from its parent,
+ * so we can safely call geometry/material dispose here without affecting
+ * anything still live in the scene).
+ */
+export function evictSongAssets(songId) {
+    const assets = _cache.get(songId);
+    if (!assets) return;
+
+    for (const gltf of Object.values(assets.gltfs)) {
+        if (!gltf) continue;
+        gltf.scene.traverse(child => {
+            if (!child.isMesh) return;
+            child.geometry?.dispose();
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            mats.forEach(m => m?.dispose());
+        });
+    }
+
+    assets.bgTexture?.dispose();
+    _cache.delete(songId);
+    console.log('[loader] evicted assets for:', songId);
+}
+
 export function clearAssetCache() {
-    _cache.clear();
+    for (const id of [..._cache.keys()]) evictSongAssets(id);
 }
