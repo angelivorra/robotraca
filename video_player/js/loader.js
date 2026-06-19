@@ -43,8 +43,8 @@ export async function loadSongAssets(songConfig, onProgress) {
     for (const path of paths) {
         tasks.push(
             gltfLoader.loadAsync(path)
-                .then(g  => { tick(); return { type: 'gltf', path, data: g    }; })
-                .catch(() => { tick(); return { type: 'gltf', path, data: null }; })
+                .then(g  => { console.log('[loader] GLTF OK:', path, g); tick(); return { type: 'gltf', path, data: g    }; })
+                .catch(e => { console.error('[loader] GLTF FAIL:', path, e); tick(); return { type: 'gltf', path, data: null }; })
         );
     }
 

@@ -2,6 +2,8 @@
  * Unified touch + mouse + gyroscope input for a canvas element.
  *
  * Callbacks (set externally):
+ *   onPressStart()           - finger/mouse went down
+ *   onPressEnd()             - finger/mouse released
  *   onTap(x, y)              - canvas pixel coords
  *   onDrag(dx, dy)           - delta pixels per move event
  *   onSwipe(dir)             - 'left' | 'right' | 'up' | 'down'
@@ -9,19 +11,21 @@
  */
 export class TouchInput {
     constructor(element) {
-        this.element = element;
-        this.onTap   = null;
-        this.onDrag  = null;
-        this.onSwipe = null;
-        this.onGyro  = null;
+        this.element      = element;
+        this.onPressStart = null;
+        this.onPressEnd   = null;
+        this.onTap        = null;
+        this.onDrag       = null;
+        this.onSwipe      = null;
+        this.onGyro       = null;
 
-        this._touches   = {};
-        this._mouseDown = false;
-        this._mousePos  = { x: 0, y: 0 };
+        this._touches      = {};
+        this._touchCount   = 0;   // active fingers on screen
+        this._mouseDown    = false;
+        this._mousePos     = { x: 0, y: 0 };
 
         this._bindTouch();
         this._bindMouse();
-        // Gyro is requested lazily on first user interaction
         this._gyroBound = false;
         element.addEventListener('click', () => this._requestGyro(), { once: true });
     }
@@ -33,10 +37,12 @@ export class TouchInput {
         el.addEventListener('touchstart', e => this._touchStart(e), { passive: false });
         el.addEventListener('touchmove',  e => this._touchMove(e),  { passive: false });
         el.addEventListener('touchend',   e => this._touchEnd(e),   { passive: true  });
+        el.addEventListener('touchcancel',e => this._touchEnd(e),   { passive: true  });
     }
 
     _touchStart(e) {
         e.preventDefault();
+        const wasZero = this._touchCount === 0;
         for (const t of e.changedTouches) {
             this._touches[t.identifier] = {
                 startX: t.clientX, startY: t.clientY,
@@ -44,6 +50,11 @@ export class TouchInput {
                 time:   Date.now(),
                 moved:  false,
             };
+            this._touchCount++;
+        }
+        if (wasZero) {
+            const first = e.changedTouches[0];
+            this.onPressStart?.(first.clientX, first.clientY);
         }
     }
 
@@ -67,6 +78,7 @@ export class TouchInput {
             const rec = this._touches[t.identifier];
             if (!rec) continue;
             delete this._touches[t.identifier];
+            this._touchCount = Math.max(0, this._touchCount - 1);
 
             const dx   = t.clientX - rec.startX;
             const dy   = t.clientY - rec.startY;
@@ -79,6 +91,7 @@ export class TouchInput {
                 this.onSwipe?.(_swipeDir(dx, dy));
             }
         }
+        if (this._touchCount === 0) this.onPressEnd?.();
     }
 
     // ── Mouse (desktop) ───────────────────────────────────────────────────────
@@ -86,10 +99,11 @@ export class TouchInput {
     _bindMouse() {
         const el = this.element;
         el.addEventListener('mousedown', e => {
-            this._mouseDown = true;
-            this._mousePos  = { x: e.clientX, y: e.clientY };
+            this._mouseDown  = true;
+            this._mousePos   = { x: e.clientX, y: e.clientY };
             this._mouseMoved = false;
             this._mouseStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+            this.onPressStart?.(e.clientX, e.clientY);
         });
         el.addEventListener('mousemove', e => {
             if (!this._mouseDown) return;
@@ -114,8 +128,14 @@ export class TouchInput {
             } else if (dist > 55 && dt < 450) {
                 this.onSwipe?.(_swipeDir(dx, dy));
             }
+            this.onPressEnd?.();
         });
-        el.addEventListener('mouseleave', () => { this._mouseDown = false; });
+        el.addEventListener('mouseleave', () => {
+            if (this._mouseDown) {
+                this._mouseDown = false;
+                this.onPressEnd?.();
+            }
+        });
     }
 
     // ── Gyroscope ────────────────────────────────────────────────────────────
@@ -126,7 +146,6 @@ export class TouchInput {
 
         const start = () => {
             window.addEventListener('deviceorientation', e => {
-                // beta: front-back tilt (-180 to 180), gamma: left-right (-90 to 90)
                 const x = Math.max(-1, Math.min(1, (e.gamma || 0) / 45));
                 const y = Math.max(-1, Math.min(1, ((e.beta  || 0) - 45) / 45));
                 this.onGyro?.(x, y);
@@ -135,7 +154,6 @@ export class TouchInput {
         };
 
         if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            // iOS 13+
             DeviceOrientationEvent.requestPermission()
                 .then(state => { if (state === 'granted') start(); })
                 .catch(() => {});
@@ -145,12 +163,12 @@ export class TouchInput {
     }
 
     dispose() {
-        // Event listeners attached to this.element will be GC'd when element is removed.
-        // Gyro listener on window stays but becomes a no-op once onGyro is cleared.
-        this.onTap   = null;
-        this.onDrag  = null;
-        this.onSwipe = null;
-        this.onGyro  = null;
+        this.onPressStart = null;
+        this.onPressEnd   = null;
+        this.onTap        = null;
+        this.onDrag       = null;
+        this.onSwipe      = null;
+        this.onGyro       = null;
     }
 }
 

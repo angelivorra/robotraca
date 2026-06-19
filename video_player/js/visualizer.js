@@ -44,6 +44,10 @@ export class Visualizer {
         this._gyroActual  = { x: 0, y: 0 };
         this._dragVelocity = { x: 0, y: 0 };
         this._isDragging   = false;
+        this._isPressing   = false;
+
+        this._raycaster = new THREE.Raycaster();
+        this._tapPlane  = new THREE.Plane(new THREE.Vector3(0, 0, 1), -1.5);
 
         this._running    = false;
         this._lastTime   = 0;
@@ -75,6 +79,8 @@ export class Visualizer {
 
         // Model group (holds the central object)
         this._modelGroup = new THREE.Group();
+        const mp = songConfig.theme.modelPosition;
+        if (mp) this._modelGroup.position.set(mp[0] ?? 0, mp[1] ?? 0, mp[2] ?? 0);
         this._threeScene.add(this._modelGroup);
 
         // Shared lights (always present, scene can add its own)
@@ -160,15 +166,19 @@ export class Visualizer {
     _bindTouchCallbacks() {
         const ti = this._touchInput;
 
+        ti.onPressStart = (screenX, screenY) => {
+            this._isPressing = true;
+            // Sparks fire immediately on touch-down at the exact press position
+            const pos = this._screenTo3D(screenX, screenY);
+            this._effects.burst.trigger(this._theme.primaryColor, pos);
+            this._effects.pulse.trigger(this._theme.primaryColor, pos);
+        };
+        ti.onPressEnd = () => { this._isPressing = false; };
+
         ti.onTap = () => {
-            // Effects
-            this._effects.burst.trigger(this._theme.primaryColor);
-            this._effects.pulse.trigger(this._theme.primaryColor);
-            // Object flash
+            // Object and scene reactions fire on release (confirmed tap, not drag)
             this._currentObject?.onTap();
-            // Scene tap
             this._currentScene?.onTap?.();
-            // CSS beat flash
             this.onBeat?.();
         };
 
@@ -180,20 +190,25 @@ export class Visualizer {
             this._modelGroup.rotation.y += dx * 0.012;
         };
 
-        ti.onSwipe = (dir) => {
-            if (dir === 'left' || dir === 'right') {
-                // Always navigate between songs — scenes never cycle
-                this.onNavigationSwipe?.(dir);
-            } else {
-                // Up/down delegates to scene (e.g. tunnel speed)
-                this._currentScene?.onSwipe?.(dir);
-            }
-        };
+        ti.onSwipe = () => { /* swipe disabled */ };
 
         ti.onGyro = (x, y) => {
             this._gyroTarget.x = x;
             this._gyroTarget.y = y;
         };
+    }
+
+    // ── Coordinate conversion ─────────────────────────────────────────────────
+
+    _screenTo3D(screenX, screenY) {
+        const ndc = new THREE.Vector2(
+            (screenX / window.innerWidth)  *  2 - 1,
+            (screenY / window.innerHeight) * -2 + 1
+        );
+        this._raycaster.setFromCamera(ndc, this._camera);
+        const target = new THREE.Vector3();
+        this._raycaster.ray.intersectPlane(this._tapPlane, target);
+        return target;
     }
 
     // ── Playback ──────────────────────────────────────────────────────────────
@@ -234,13 +249,20 @@ export class Visualizer {
             this.onBeat?.();
         }
 
-        // Light reactivity — base values keep the model lit even in silence
-        this._light1.intensity = 2.0 + reactive.bassEnergy * 5;
-        const c2 = new THREE.Color(this._theme.secondaryColor);
-        c2.lerp(new THREE.Color(this._theme.primaryColor), reactive.midsEnergy * 0.6);
-        this._light2.color.copy(c2);
-        this._light2.intensity = 1.5 + reactive.midsEnergy * 4;
-        this._fillLight.intensity = 0.8 + reactive.highsEnergy * 2;
+        // Lights react to music ONLY while the screen is pressed — calm otherwise
+        if (this._isPressing) {
+            this._light1.intensity    = 2.0 + reactive.bassEnergy * 5;
+            const c2 = new THREE.Color(this._theme.secondaryColor);
+            c2.lerp(new THREE.Color(this._theme.primaryColor), reactive.midsEnergy * 0.6);
+            this._light2.color.copy(c2);
+            this._light2.intensity    = 1.5 + reactive.midsEnergy * 4;
+            this._fillLight.intensity = 0.8 + reactive.highsEnergy * 2;
+        } else {
+            this._light1.intensity    = 2.0;
+            this._light2.color.set(this._theme.secondaryColor);
+            this._light2.intensity    = 1.5;
+            this._fillLight.intensity = 0.8;
+        }
 
         // Scene update
         this._currentScene?.update(reactive, delta);

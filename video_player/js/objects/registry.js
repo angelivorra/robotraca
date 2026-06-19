@@ -16,13 +16,13 @@ function _isGltfPath(spec) {
  * Falls back to procedurals if all GLTF entries failed to load.
  */
 export function pickObjectSpec(specs, gltfs) {
-    // Filter: keep GLTF specs that actually loaded, and keep all procedural names
+    console.log('[registry] pickObjectSpec specs:', specs, 'gltfs keys:', Object.keys(gltfs), 'gltfs values null?:', Object.entries(gltfs).map(([k,v]) => `${k}=${v==null?'NULL':'OK'}`));
     const available = specs.filter(spec => {
         if (_isGltfPath(spec)) return gltfs[spec] != null;
         return spec in PROCEDURAL;
     });
-
-    if (available.length === 0) return 'icosahedron'; // ultimate fallback
+    console.log('[registry] available:', available);
+    if (available.length === 0) return 'icosahedron';
     return available[Math.floor(Math.random() * available.length)];
 }
 

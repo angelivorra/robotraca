@@ -48,7 +48,7 @@ export const SONGS = [
         coverArt:  'img/tontos.png',
         background: null,
 
-        scenes:  ['city', 'space', 'tunnel'],
+        scenes:  ['apocalypse'],
         objects: ['songs/tontos/model.glb', 'torus-knot'],
 
         theme: {
@@ -57,6 +57,8 @@ export const SONGS = [
             secondaryColor: '#9b59b6',
             modelBaseScale: 1.0,
             cameraDistance: 5,
+            modelPosition:  [0, 1.6, 0],
+            modelEmissive:  false,
         }
     },
     {
@@ -68,7 +70,7 @@ export const SONGS = [
         coverArt:  'img/sarten.png',
         background: null,
 
-        scenes:  ['city', 'tunnel'],
+        scenes:  ['city', 'tunnel', 'apocalypse'],
         objects: ['songs/sarten/model.glb', 'icosahedron', 'torus-knot'],
 
         theme: {

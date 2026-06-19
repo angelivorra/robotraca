@@ -1,11 +1,15 @@
-import { TunnelScene } from './tunnel.js';
-import { SpaceScene }  from './space.js';
-import { CityScene }   from './city.js';
+import { TunnelScene }      from './tunnel.js';
+import { SpaceScene }       from './space.js';
+import { CityScene }        from './city.js';
+import { SpaceshipScene }   from './spaceship.js';
+import { ApocalypseScene }  from './apocalypse.js';
 
 const REGISTRY = {
-    tunnel: TunnelScene,
-    space:  SpaceScene,
-    city:   CityScene,
+    tunnel:     TunnelScene,
+    space:      SpaceScene,
+    city:       CityScene,
+    spaceship:  SpaceshipScene,
+    apocalypse: ApocalypseScene,
 };
 
 export function createScene(name) {
