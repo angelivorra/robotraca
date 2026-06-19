@@ -11,6 +11,9 @@ const NEAR_Z   =  4.5;    // Z of nearest segment (in front of camera at z=5)
 const FAR_Z    = NEAR_Z - NUM_SEGS * SEG_D;  // ≈ -41.26
 const TOTAL_Z  = NUM_SEGS * SEG_D;           // ≈ 45.76
 const NUM_TREES = 22;     // per side
+const NUM_CARS  =  5;
+const LANE_X    =  ROAD_W / 4;    // 1.5 — centre of each lane
+const NUM_BIRDS =  7;
 
 const ROAD_COLS   = ['#3c3c3c', '#4a4a4a'];
 const GRASS_COLS  = ['#007722', '#00aa33'];
@@ -31,6 +34,8 @@ export class OutrunScene {
         this._treesL     = [];
         this._treesR     = [];
         this._glitters   = [];
+        this._cars       = [];
+        this._birds      = [];
 
         this._curveDrift  = 0;
         this._curveTarget = 0;
@@ -51,6 +56,8 @@ export class OutrunScene {
         _buildRoad(this._group, this._segs);
         _buildTrees(this._group, this._treesL, -1);
         _buildTrees(this._group, this._treesR,  1);
+        _buildCars(this._group, this._cars);
+        _buildBirds(this._group, this._birds);
     }
 
     update(reactive, delta) {
@@ -104,6 +111,28 @@ export class OutrunScene {
                 tr.group.position.x = side * tr.sideX + this._curveDrift * t;
             }
         }
+
+        // ── Cars ──────────────────────────────────────────────────────────────
+        for (const car of this._cars) {
+            car.z += speed * car.relSpeed;
+            if (car.z > NEAR_Z + 2) {
+                car.z = FAR_Z - 1 - Math.random() * 8;
+            }
+            const t = Math.max(0, Math.min(1, (NEAR_Z - car.z) / (NEAR_Z - FAR_Z)));
+            car.group.position.z = car.z;
+            car.group.position.x = car.lane * LANE_X + this._curveDrift * t;
+        }
+
+        // ── Birds ─────────────────────────────────────────────────────────────
+        for (const b of this._birds) {
+            b.x += b.dx * delta;
+            if (b.x >  50) b.x = -50;
+            if (b.x < -50) b.x =  50;
+            b.group.position.x = b.x;
+            const flap = Math.sin(this._time * b.flapSpeed + b.flapPhase) * 0.45;
+            b.wingL.rotation.z =  0.22 + flap;
+            b.wingR.rotation.z = -0.22 - flap;
+        }
     }
 
     onBeat()  { this._beatFlash = 3.5; this._speedBoost += 0.14; }
@@ -126,6 +155,8 @@ export class OutrunScene {
         this._treesL   = [];
         this._treesR   = [];
         this._glitters = [];
+        this._cars     = [];
+        this._birds    = [];
     }
 }
 
@@ -343,6 +374,86 @@ function _buildPole(parent, rand) {
     const capCols = ['#ff2200', '#00ccff', '#ffcc00'];
     const cap = _flat(capCols[Math.floor(rand() * 3)]);
     _bm(parent, 0.22, 0.14, 0.22, cap, 0, 2.87, 0);
+}
+
+// ── Cars ──────────────────────────────────────────────────────────────────────
+
+const CAR_COLS = ['#cc1100', '#0033dd', '#ddbb00', '#ffffff', '#ff5500'];
+
+function _buildCars(group, cars) {
+    const rand    = _seededRand(123);
+    const darkMat = _flat('#111111');
+    const winMat  = _flat('#223355');
+
+    for (let i = 0; i < NUM_CARS; i++) {
+        const g       = new THREE.Group();
+        const bodyMat = _flat(CAR_COLS[i % CAR_COLS.length]);
+
+        // Body
+        _bm(g, 1.20, 0.30, 2.20, bodyMat, 0,     0.15, 0);
+        // Cabin
+        _bm(g, 0.86, 0.22, 0.95, bodyMat, 0,     0.41, 0.08);
+        // Windshield (front) and rear window
+        _bm(g, 0.76, 0.18, 0.05, winMat,  0,     0.41,  0.55);
+        _bm(g, 0.76, 0.18, 0.05, winMat,  0,     0.41, -0.39);
+        // Wheel arches (4 corners)
+        for (const [wx, wz] of [[-0.56, -0.76], [0.56, -0.76], [-0.56, 0.76], [0.56, 0.76]]) {
+            _bm(g, 0.14, 0.16, 0.36, darkMat, wx, -0.02, wz);
+        }
+        // Headlights
+        _bm(g, 0.18, 0.07, 0.04, _flat('#ffffcc'), -0.38, 0.14,  1.13);
+        _bm(g, 0.18, 0.07, 0.04, _flat('#ffffcc'),  0.38, 0.14,  1.13);
+        // Taillights
+        _bm(g, 0.18, 0.07, 0.04, _flat('#ff2200'), -0.38, 0.14, -1.13);
+        _bm(g, 0.18, 0.07, 0.04, _flat('#ff2200'),  0.38, 0.14, -1.13);
+
+        const lane     = (i % 2 === 0) ? -1 : 1;
+        const z        = FAR_Z + (i / NUM_CARS) * TOTAL_Z * 0.72;
+        const relSpeed = 0.90 + rand() * 0.25;   // some slower (we pass), some faster (they pass)
+
+        g.position.set(lane * LANE_X, ROAD_Y, z);
+        group.add(g);
+        cars.push({ group: g, z, lane, relSpeed });
+    }
+}
+
+// ── Birds ─────────────────────────────────────────────────────────────────────
+
+function _buildBirds(group, birds) {
+    const rand    = _seededRand(87);
+    const birdMat = _flat('#150022');   // dark silhouette against sunset sky
+
+    for (let i = 0; i < NUM_BIRDS; i++) {
+        const g     = new THREE.Group();
+        const scale = 0.55 + rand() * 0.55;
+
+        const wingL = new THREE.Mesh(
+            new THREE.BoxGeometry(0.72 * scale, 0.05, 0.10), birdMat);
+        wingL.position.set(-0.38 * scale, 0, 0);
+        g.add(wingL);
+
+        const wingR = new THREE.Mesh(
+            new THREE.BoxGeometry(0.72 * scale, 0.05, 0.10), birdMat);
+        wingR.position.set(0.38 * scale, 0, 0);
+        g.add(wingR);
+
+        // Body
+        _bm(g, 0.15 * scale, 0.07, 0.22 * scale, birdMat, 0, 0, 0);
+
+        const x = (rand() - 0.5) * 50;
+        const y =  1.2 + rand() * 5.5;
+        const z = -6   - rand() * 18;
+
+        g.position.set(x, y, z);
+        group.add(g);
+        birds.push({
+            group: g, wingL, wingR,
+            x,
+            dx:        (rand() - 0.5) * 2.2,
+            flapSpeed: 2.5 + rand() * 4.0,
+            flapPhase: rand() * Math.PI * 2,
+        });
+    }
 }
 
 // ── Utility ───────────────────────────────────────────────────────────────────
