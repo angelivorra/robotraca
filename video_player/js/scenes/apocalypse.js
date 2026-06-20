@@ -354,7 +354,7 @@ function _spawnForeground(group, humans, cars, debris, flames, theme) {
         const z    = -0.3 + Math.random() * 0.5;
         const col  = carColors[i % carColors.length];
         const c    = _buildCar(group, x, GROUND_Y, z, col, flames);
-        cars.push({ group: c, scrollMult: 0.18 + Math.random() * 0.25 });
+        cars.push({ group: c, scrollMult: 0.05 + Math.random() * 0.07 });
     }
 
     // Debris

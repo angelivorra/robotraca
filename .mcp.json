@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "carla-mcp": {
+      "command": "/home/angel/git/carla-mcp-server/.venv/bin/python",
+      "args": ["/home/angel/git/carla-mcp-server/server.py"],
+      "env": {
+        "CARLA_PATH": "/usr/share/carla",
+        "PYTHONPATH": "/usr/share/carla",
+        "LD_LIBRARY_PATH": "/usr/lib/carla",
+        "CARLA_DRIVER": "PulseAudio"
+      }
+    }
+  }
+}

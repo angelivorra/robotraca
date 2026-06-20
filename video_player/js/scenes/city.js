@@ -1,28 +1,37 @@
 import * as THREE from 'three';
 
-const NUM_ROWS      = 14;        // pairs of buildings (left + right) per "slot"
-const ROW_SPACING   = 5;         // z distance between rows
-const TOTAL_Z       = NUM_ROWS * ROW_SPACING;
-const WRAP_Z        = 8;         // rows wrap when they pass this z
-const ROAD_HALF_W   = 2.5;       // half-width of road (lane markers)
-const BLDG_LANE_X   = 5.2;       // center x of building columns
+const NUM_ROWS     = 14;
+const ROW_SPACING  = 5;
+const TOTAL_Z      = NUM_ROWS * ROW_SPACING;
+const WRAP_Z       = 8;
+const ROAD_HALF_W  = 2.5;
+const BLDG_LANE_X  = 5.2;
+const MAX_CARS     = 4;
+const CAR_LANES    = [-1.2, 1.2];
+const FILL_SPEED   = 2.8;   // 0→1 en ~0.36s por beat
 
 export class CityScene {
     get useBloom() { return this._useBloom; }
 
     constructor() {
         this._group         = null;
-        this._rows          = [];     // [{ group, reactive[] }]
+        this._rows          = [];
         this._centerLineMat = null;
+        this._roadEdgeMats  = [];
         this._speedBoost    = 0;
         this._beatFlash     = 0;
-        this._beatSweep     = 2.0;   // > 1 = inactive; 0→1 = sweep front position
+        this._beatSweep     = 2.0;
+        this._beatFill      = 1.0;   // empieza lleno; se resetea a 0 en cada beat
         this._time          = 0;
         this._useBloom      = false;
         this._theme         = null;
         this._primaryCol    = null;
         this._secondaryCol  = null;
         this._white         = new THREE.Color(1, 1, 1);
+        this._cars          = [];
+        this._carSpawnTimer = 0;
+        this._carSpawnNext  = 4.0;
+        this._carGroup      = null;
     }
 
     init(threeScene, theme) {
@@ -36,17 +45,19 @@ export class CityScene {
         this._buildFloor(theme);
         this._buildCity(theme);
 
+        this._carGroup = new THREE.Group();
+        this._group.add(this._carGroup);
+
         this._primaryCol   = new THREE.Color(theme.primaryColor);
         this._secondaryCol = new THREE.Color(theme.secondaryColor);
     }
 
-    // ── Floor & road markings ────────────────────────────────────────────────
+    // ── Suelo y marcas de carretera ──────────────────────────────────────────
 
     _buildFloor(theme) {
         const primary   = new THREE.Color(theme.primaryColor);
         const secondary = new THREE.Color(theme.secondaryColor);
 
-        // Tron-style grid
         const grid = new THREE.GridHelper(
             200, 100,
             primary.clone().multiplyScalar(0.3),
@@ -55,21 +66,22 @@ export class CityScene {
         grid.position.y = -1.8;
         this._group.add(grid);
 
-        // Road edge lines
-        const edgeMat = new THREE.LineBasicMaterial({ color: secondary });
+        // Líneas de borde de carretera — guardadas para reactividad al beat
         for (const x of [-ROAD_HALF_W, ROAD_HALF_W]) {
+            const mat = new THREE.LineBasicMaterial({ color: secondary.clone() });
+            this._roadEdgeMats.push({ mat, baseCol: secondary.clone() });
             const pts = [
                 new THREE.Vector3(x, -1.79, -(TOTAL_Z + 10)),
                 new THREE.Vector3(x, -1.79, WRAP_Z),
             ];
             this._group.add(new THREE.Line(
-                new THREE.BufferGeometry().setFromPoints(pts), edgeMat.clone()
+                new THREE.BufferGeometry().setFromPoints(pts), mat
             ));
         }
 
-        // Animated dashed center line
+        // Línea central discontinua animada
         this._centerLineMat = new THREE.LineDashedMaterial({
-            color:    primary,
+            color:    primary.clone(),
             dashSize: 0.8,
             gapSize:  0.8,
         });
@@ -85,7 +97,7 @@ export class CityScene {
         this._group.add(centerLine);
     }
 
-    // ── Buildings ────────────────────────────────────────────────────────────
+    // ── Edificios ────────────────────────────────────────────────────────────
 
     _buildCity(theme) {
         const rand      = _seededRand(137);
@@ -103,11 +115,11 @@ export class CityScene {
                 const d    = 0.9  + rand() * 1.8;
                 const xVar = rand() * 1.2;
                 const bx   = side * (BLDG_LANE_X + w / 2 + xVar);
-
-                // Deterministic per-building phase offset (no rand() consumed)
                 const bPhase = (i * 2.399 + side * 1.618) % (Math.PI * 2);
+                // Desfase de llenado por edificio: los más altos se iluminan algo después
+                const fillDelay = (i * 0.137 + (side > 0 ? 0.0 : 0.093) + h * 0.018) % 0.28;
 
-                // ── Body ──────────────────────────────────────────
+                // ── Cuerpo ──────────────────────────────────────────
                 const body = new THREE.Mesh(
                     new THREE.BoxGeometry(w, h, d),
                     new THREE.MeshStandardMaterial({
@@ -117,14 +129,14 @@ export class CityScene {
                 body.position.set(bx, h / 2, 0);
                 rowGroup.add(body);
 
-                // ── Neon floor strips ──────────────────────────────
+                // ── Tiras de neón por piso ──────────────────────────
                 const neonColor = (i + (side > 0 ? 1 : 0)) % 2 === 0
                     ? primary.clone() : secondary.clone();
                 const numStrips = Math.max(1, Math.floor(h / 1.1));
 
                 for (let s = 0; s < numStrips; s++) {
                     const sy    = (s + 0.5) * (h / numStrips) + 0.1;
-                    const syN   = (s + 0.5) / numStrips;   // 0=bottom, 1=top (normalised)
+                    const syN   = (s + 0.5) / numStrips;   // 0=planta baja, 1=azotea
                     const strip = new THREE.Mesh(
                         new THREE.BoxGeometry(w + 0.06, 0.04, d + 0.06),
                         new THREE.MeshStandardMaterial({
@@ -134,10 +146,10 @@ export class CityScene {
                     );
                     strip.position.set(bx, sy, 0);
                     rowGroup.add(strip);
-                    reactive.push({ mesh: strip, sy: syN, bPhase, type: 'strip', col: neonColor.clone() });
+                    reactive.push({ mesh: strip, sy: syN, bPhase, fillDelay, type: 'strip', col: neonColor.clone() });
                 }
 
-                // ── Vertical edge neon lines ───────────────────────
+                // ── Aristas verticales de neón ─────────────────────
                 const edgeMat = new THREE.MeshStandardMaterial({
                     color: neonColor, emissive: neonColor,
                     emissiveIntensity: 1.2, roughness: 0.0, metalness: 1.0,
@@ -149,10 +161,10 @@ export class CityScene {
                     );
                     edge.position.set(bx + ex, h / 2, d / 2);
                     rowGroup.add(edge);
-                    reactive.push({ mesh: edge, sy: 0.5, bPhase, type: 'edge', col: neonColor.clone() });
+                    reactive.push({ mesh: edge, sy: 0.5, bPhase, fillDelay, type: 'edge', col: neonColor.clone() });
                 }
 
-                // ── Street light (every 3 rows) ────────────────────
+                // ── Farola (cada 3 filas) ──────────────────────────
                 if (i % 3 === 0) {
                     const lampColor = neonColor.clone();
                     const pole = new THREE.Mesh(
@@ -171,10 +183,10 @@ export class CityScene {
                     );
                     lamp.position.set(side * (ROAD_HALF_W + 0.5), 2.9, d / 2);
                     rowGroup.add(lamp);
-                    reactive.push({ mesh: lamp, sy: 0.5, bPhase, type: 'lamp', col: lampColor });
+                    reactive.push({ mesh: lamp, sy: 0.5, bPhase, fillDelay, type: 'lamp', col: lampColor });
                 }
 
-                // ── Neon rooftop accent ────────────────────────────
+                // ── Acento de azotea ───────────────────────────────
                 const roofColor = (i % 3 === 0) ? primary.clone() : secondary.clone();
                 const roof = new THREE.Mesh(
                     new THREE.BoxGeometry(w, 0.06, d),
@@ -185,7 +197,7 @@ export class CityScene {
                 );
                 roof.position.set(bx, h + 0.03, 0);
                 rowGroup.add(roof);
-                reactive.push({ mesh: roof, sy: 1.0, bPhase, type: 'roof', col: roofColor.clone() });
+                reactive.push({ mesh: roof, sy: 1.0, bPhase, fillDelay, type: 'roof', col: roofColor.clone() });
             }
 
             this._group.add(rowGroup);
@@ -193,20 +205,96 @@ export class CityScene {
         }
     }
 
-    // ── Per-frame update ──────────────────────────────────────────────────────
+    // ── Coches de Tron ───────────────────────────────────────────────────────
+
+    _spawnCar() {
+        const theme  = this._theme;
+        const lane   = CAR_LANES[Math.floor(Math.random() * CAR_LANES.length)];
+        const carCol = Math.random() > 0.5
+            ? new THREE.Color(theme.primaryColor)
+            : new THREE.Color(theme.secondaryColor);
+
+        const carGrp = new THREE.Group();
+
+        // Carrocería oscura
+        carGrp.add(new THREE.Mesh(
+            new THREE.BoxGeometry(1.0, 0.32, 2.0),
+            new THREE.MeshStandardMaterial({ color: '#040408', roughness: 0.7, metalness: 0.5 })
+        ));
+
+        // Cabina
+        const cockpit = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.22, 0.8),
+            new THREE.MeshStandardMaterial({ color: '#080814', roughness: 0.2, metalness: 0.9 })
+        );
+        cockpit.position.set(0, 0.27, 0.1);
+        carGrp.add(cockpit);
+
+        const glowMats = [];
+
+        const mkGlow = () => new THREE.MeshStandardMaterial({
+            color: carCol.clone(), emissive: carCol.clone(),
+            emissiveIntensity: 2.5, roughness: 0.0, metalness: 1.0,
+        });
+
+        // Tiras laterales de luz
+        for (const sx of [-0.52, 0.52]) {
+            const strip = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 2.0), mkGlow());
+            strip.position.set(sx, 0.05, 0);
+            carGrp.add(strip);
+            glowMats.push(strip.material);
+        }
+
+        // Faros delanteros blancos
+        const frontMat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(1, 1, 1), emissive: new THREE.Color(1, 1, 1),
+            emissiveIntensity: 3.0, roughness: 0.0, metalness: 1.0,
+        });
+        const front = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.05, 0.04), frontMat);
+        front.position.set(0, 0.08, -1.02);
+        carGrp.add(front);
+
+        // Pilotos traseros de color
+        const rearMat = mkGlow();
+        rearMat.emissiveIntensity = 2.0;
+        const rear = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.05, 0.04), rearMat);
+        rear.position.set(0, 0.08, 1.02);
+        carGrp.add(rear);
+        glowMats.push(rearMat);
+
+        carGrp.position.set(lane, -1.64, -(TOTAL_Z + 5));
+        this._carGroup.add(carGrp);
+
+        const speed = 0.16 + Math.random() * 0.14;
+        this._cars.push({ group: carGrp, speed, glowMats });
+    }
+
+    // ── Actualización por frame ───────────────────────────────────────────────
 
     update(reactive, delta) {
         this._speedBoost *= 0.96;
         this._time       += delta;
         this._beatSweep  += delta * 7.2;
-        // Delta-correct decay: at 60fps ≈ 0.82 per frame → near-zero within ~1 beat
         this._beatFlash  *= Math.pow(0.82, delta * 60);
+        // Ola de llenado por pisos: avanza 0→1 desde el último beat
+        this._beatFill    = Math.min(1.0, this._beatFill + delta * FILL_SPEED);
 
         const t     = this._time;
         const bf    = this._beatFlash;
         const speed = 0.06 + reactive.bassEnergy * 0.08 + this._speedBoost;
 
-        if (this._centerLineMat) this._centerLineMat.dashOffset -= speed * 0.4;
+        // Línea central: pulso de color al beat
+        if (this._centerLineMat) {
+            this._centerLineMat.dashOffset -= speed * 0.4;
+            const bright = Math.min(0.85, bf * 0.5 + reactive.bassEnergy * 0.35);
+            this._centerLineMat.color.lerpColors(this._primaryCol, this._white, bright);
+        }
+
+        // Líneas de borde: se iluminan en el beat
+        for (const { mat, baseCol } of this._roadEdgeMats) {
+            const bright = Math.min(1.0, bf * 0.65 + reactive.bassEnergy * 0.45);
+            mat.color.lerpColors(baseCol, this._white, bright);
+        }
 
         const sweepActive = this._beatSweep < 1.0;
 
@@ -215,32 +303,37 @@ export class CityScene {
             if (group.position.z > WRAP_Z) group.position.z -= TOTAL_Z;
 
             for (const el of meshes) {
-                const { mesh, sy, bPhase, type, col } = el;
+                const { mesh, sy, bPhase, fillDelay, type, col } = el;
 
-                // Scan line: steady time-based, no energy dependency
-                const scan = Math.max(0, 1.0 - Math.abs(sy - ((t * 1.5 + bPhase * 0.16) % 1.0)) * 9) * 1.4;
+                // Ola piso a piso: cada edificio tiene su propio desfase
+                const adjFill = Math.max(0, this._beatFill - fillDelay);
+                // Frente brillante de la ola en el piso actual
+                const front   = Math.max(0, 1.0 - Math.abs(sy - adjFill) * 7) * 3.5;
+                // Brillo continuo en los pisos ya iluminados por la ola
+                const passed  = Math.max(0, Math.min(1.0, (adjFill - sy) * 7));
+                const floorGlow = front + passed * 0.85;
 
-                // Beat sweep: bright front racing from bottom on every beat
+                const scan = Math.max(0, 1.0 - Math.abs(sy - ((t * 1.5 + bPhase * 0.16) % 1.0)) * 9) * 0.9;
+
                 const sweepDist = sweepActive ? Math.abs(sy - this._beatSweep) : 2;
-                const sweep     = Math.max(0, 1.0 - sweepDist * 14) * 5.0;
+                const sweep     = Math.max(0, 1.0 - sweepDist * 14) * 4.0;
 
                 let intensity;
 
                 if (type === 'strip') {
-                    // Subtle background wave + beat flash as the dominant light source
                     const wave = (Math.sin(t * 5.0 - sy * Math.PI * 3.0 + bPhase) + 1) * 0.5;
-                    intensity  = 0.05 + wave * 0.45 + scan + sweep + bf * (1.2 + sy * 2.2);
+                    intensity  = 0.03 + wave * 0.12 + scan * 0.3 + sweep + floorGlow + bf * (0.6 + sy * 1.2);
                     const colorMix = (Math.sin(t * 0.8 + sy * Math.PI + bPhase * 0.5) + 1) * 0.5;
                     mesh.material.emissive.lerpColors(
                         this._primaryCol, this._secondaryCol, colorMix * (0.5 + bf * 0.07));
 
                 } else if (type === 'edge') {
                     const pulse = (Math.sin(t * 3.5 + bPhase) + 1) * 0.5;
-                    intensity   = 0.06 + pulse * 0.35 + sweep * 0.4 + bf * 1.6;
+                    intensity   = 0.06 + pulse * 0.3 + sweep * 0.4 + bf * 1.4 + passed * 0.4;
                     mesh.material.emissive.lerpColors(col, this._white, Math.min(0.85, bf * 0.18));
 
                 } else if (type === 'roof') {
-                    intensity = 0.12 + sweep * 0.25 + bf * 2.8;
+                    intensity = 0.12 + sweep * 0.25 + bf * 2.5 + passed * 0.6;
                     const colorMix = (Math.sin(t * 2.5 + bPhase) + 1) * 0.5;
                     mesh.material.emissive.lerpColors(this._primaryCol, this._secondaryCol, colorMix);
 
@@ -252,6 +345,32 @@ export class CityScene {
                 mesh.material.emissiveIntensity = Math.min(5.5, intensity);
             }
         }
+
+        // Spawn y movimiento de coches Tron
+        this._carSpawnTimer += delta;
+        if (this._carSpawnTimer >= this._carSpawnNext && this._cars.length < MAX_CARS) {
+            this._spawnCar();
+            this._carSpawnTimer = 0;
+            this._carSpawnNext  = 3.5 + Math.random() * 5.5;
+        }
+
+        const carGlow = 2.0 + bf * 2.5;
+        for (let i = this._cars.length - 1; i >= 0; i--) {
+            const car = this._cars[i];
+            car.group.position.z += car.speed + speed;
+            for (const mat of car.glowMats) mat.emissiveIntensity = carGlow;
+            if (car.group.position.z > WRAP_Z + 4) {
+                this._carGroup.remove(car.group);
+                car.group.traverse(child => {
+                    if (!child.isMesh) return;
+                    child.geometry?.dispose();
+                    Array.isArray(child.material)
+                        ? child.material.forEach(m => m?.dispose())
+                        : child.material?.dispose();
+                });
+                this._cars.splice(i, 1);
+            }
+        }
     }
 
     onSwipe(dir) {
@@ -259,14 +378,14 @@ export class CityScene {
         if (dir === 'right') this._speedBoost = Math.max(0, this._speedBoost - 0.12);
     }
 
-    onTap()  { this._beatFlash = 2.5; this._beatSweep = 0.0; }
-    onBeat() { this._beatFlash = 5.0; this._beatSweep = 0.0; }
+    onTap()  { this._beatFlash = 2.5; this._beatSweep = 0.0; this._beatFill = 0.0; }
+    onBeat() { this._beatFlash = 5.0; this._beatSweep = 0.0; this._beatFill = 0.0; }
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
+    // ── Limpieza ──────────────────────────────────────────────────────────────
 
     dispose() {
         this._group?.traverse(child => {
-            if (!child.isMesh && !(child.isLine)) return;
+            if (!child.isMesh && !child.isLine) return;
             child.geometry?.dispose();
             const mats = Array.isArray(child.material) ? child.material : [child.material];
             mats.forEach(m => m?.dispose());
@@ -275,10 +394,13 @@ export class CityScene {
         this._group         = null;
         this._rows          = [];
         this._centerLineMat = null;
+        this._roadEdgeMats  = [];
+        this._cars          = [];
+        this._carGroup      = null;
     }
 }
 
-// Deterministic PRNG (Park-Miller) — same seed → same city every time
+// PRNG determinista (Park-Miller) — misma semilla → misma ciudad
 function _seededRand(seed) {
     let s = seed >>> 0;
     return function () {

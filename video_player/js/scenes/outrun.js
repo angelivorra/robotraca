@@ -5,18 +5,20 @@ const ROAD_Y   = -1.5;
 const ROAD_W   =  6.0;
 const BORDER_W =  0.42;
 const GRASS_W  =  8.0;
-const SEG_D    =  0.52;   // Z depth per road segment
+const SEG_D    =  0.52;
 const NUM_SEGS =  88;
-const NEAR_Z   =  4.5;    // Z of nearest segment (in front of camera at z=5)
-const FAR_Z    = NEAR_Z - NUM_SEGS * SEG_D;  // ≈ -41.26
-const TOTAL_Z  = NUM_SEGS * SEG_D;           // ≈ 45.76
-const NUM_TREES = 22;     // per side
+const NEAR_Z   =  4.5;
+const FAR_Z    = NEAR_Z - NUM_SEGS * SEG_D;
+const TOTAL_Z  = NUM_SEGS * SEG_D;
+const NUM_TREES = 22;
 const NUM_CARS  =  5;
-const LANE_X    =  ROAD_W / 4;    // 1.5 — centre of each lane
+const LANE_X    =  ROAD_W / 4;
 
 const ROAD_COLS   = ['#3c3c3c', '#4a4a4a'];
 const GRASS_COLS  = ['#007722', '#00aa33'];
 const BORDER_COLS = ['#dd2000', '#f5f5f5'];
+const BORDER_PEAKS = ['#ff5500', '#ffff88'];
+const GRASS_PEAKS  = ['#00dd55', '#00ff77'];
 
 export class OutrunScene {
     get useBloom() { return this._useBloom; }
@@ -26,18 +28,31 @@ export class OutrunScene {
         this._time       = 0;
         this._speedBoost = 0;
         this._beatFlash  = 0;
+        this._beatPulse  = 0;   // decae más lento que beatFlash — para sky/sol
         this._useBloom   = false;
         this._theme      = null;
 
         this._segs       = [];
         this._treesL     = [];
         this._treesR     = [];
+        this._signsL     = [];  // carteles de neón que scrollean
+        this._signsR     = [];
         this._glitters   = [];
+        this._neonSigns  = [];  // { mat, seed } — actualización de emissive
         this._cars       = [];
+        this._sunMesh    = null;
+        this._skyMats    = [];  // { mat, base, peak }
 
         this._curveDrift  = 0;
         this._curveTarget = 0;
         this._curveTimer  = 0;
+
+        // Colores pre-allocados para animar bordillos y hierba sin crear objetos por frame
+        this._borderBase = BORDER_COLS.map(c => new THREE.Color(c));
+        this._borderPeak = BORDER_PEAKS.map(c => new THREE.Color(c));
+        this._grassBase  = GRASS_COLS.map(c => new THREE.Color(c));
+        this._grassPeak  = GRASS_PEAKS.map(c => new THREE.Color(c));
+        this._tmpCol     = new THREE.Color();
     }
 
     init(threeScene, theme) {
@@ -48,18 +63,21 @@ export class OutrunScene {
         threeScene.background = new THREE.Color('#1a0844');
         threeScene.fog = new THREE.FogExp2(new THREE.Color('#3a1044'), 0.016);
 
-        _buildSky(this._group, this._glitters);
+        this._sunMesh = _buildSky(this._group, this._glitters, this._skyMats);
         _buildMountains(this._group);
         _buildBaseGround(this._group);
         _buildRoad(this._group, this._segs);
         _buildTrees(this._group, this._treesL, -1);
         _buildTrees(this._group, this._treesR,  1);
+        _buildSigns(this._group, this._signsL, this._neonSigns, -1);
+        _buildSigns(this._group, this._signsR, this._neonSigns,  1);
         _buildCars(this._group, this._cars);
     }
 
     update(reactive, delta) {
         this._speedBoost *= 0.96;
-        this._beatFlash  *= 0.82;
+        this._beatFlash  *= Math.pow(0.82, delta * 60);
+        this._beatPulse  *= Math.pow(0.88, delta * 60);
         this._time       += delta;
 
         const speed = 0.12 + reactive.bassEnergy * 0.28 + this._speedBoost;
@@ -71,19 +89,40 @@ export class OutrunScene {
             this._curveTarget = r < 0.33 ? 0 : (r < 0.66 ? 3.5 : -3.5);
             this._curveTimer  = 3.5 + Math.random() * 2.5;
         }
-        // Smooth drift: near road stays at x=0, far road shifts by curveDrift
         this._curveDrift += (this._curveTarget - this._curveDrift) * delta * 1.2;
 
-        // ── Sun / star flicker ────────────────────────────────────────────────
-        const baseEmi = 1.8 + reactive.highsEnergy * 4.0 + this._beatFlash * 0.4;
+        // ── Pulso de color en el cielo ────────────────────────────────────────
+        const skyT = Math.min(1.0, this._beatPulse * 0.85 + reactive.bassEnergy * 0.3);
+        for (const { mat, base, peak } of this._skyMats) {
+            mat.color.lerpColors(base, peak, skyT);
+        }
+
+        // ── Pulso de escala del sol ───────────────────────────────────────────
+        if (this._sunMesh) {
+            const s = 1.0 + this._beatFlash * 0.12 + reactive.bassEnergy * 0.06;
+            this._sunMesh.scale.setScalar(Math.min(1.35, s));
+        }
+
+        // ── Brillo de estrellas / sol / horizonte (más reactivo al beat) ──────
+        const baseEmi = 1.5 + reactive.highsEnergy * 3.0 + reactive.bassEnergy * 1.2 + this._beatFlash * 2.5;
         for (const f of this._glitters) {
             if (!f.material?.emissive) continue;
-            f.material.emissiveIntensity = Math.max(0.3,
+            f.material.emissiveIntensity = Math.max(0.4,
                 baseEmi + Math.sin(this._time * 13 + (f.userData.seed ?? 0)) * 0.9
                         + (Math.random() - 0.5) * 0.3);
         }
 
-        // ── Road segments ─────────────────────────────────────────────────────
+        // ── Carteles de neón ──────────────────────────────────────────────────
+        const signEmi = 1.0 + reactive.midsEnergy * 2.5 + this._beatFlash * 5.5;
+        for (const { mat, seed } of this._neonSigns) {
+            mat.emissiveIntensity = Math.min(9.0,
+                signEmi + Math.sin(this._time * 8.0 + seed) * 0.5);
+        }
+
+        // ── Segmentos de carretera ────────────────────────────────────────────
+        const borderT = Math.min(1.0, this._beatFlash * 0.45 + reactive.bassEnergy * 0.3);
+        const grassT  = Math.min(0.8, reactive.bassEnergy * 0.4 + this._beatFlash * 0.18);
+
         for (const s of this._segs) {
             s.z += speed;
             if (s.z > NEAR_Z) {
@@ -91,13 +130,22 @@ export class OutrunScene {
                 s.stripe ^= 1;
                 _applyStripe(s);
             }
-            // t=0 at near (camera), t=1 at far (horizon): far segments shift with curve
             const t = Math.max(0, Math.min(1, (NEAR_Z - s.z) / (NEAR_Z - FAR_Z)));
             s.group.position.z = s.z;
             s.group.position.x = this._curveDrift * t;
+
+            // Bordillos flashean al beat
+            this._tmpCol.lerpColors(this._borderBase[s.stripe], this._borderPeak[s.stripe], borderT);
+            s.bL.material.color.copy(this._tmpCol);
+            s.bR.material.color.copy(this._tmpCol);
+
+            // Hierba se intensifica con el bajo
+            this._tmpCol.lerpColors(this._grassBase[s.stripe], this._grassPeak[s.stripe], grassT);
+            s.gL.material.color.copy(this._tmpCol);
+            s.gR.material.color.copy(this._tmpCol);
         }
 
-        // ── Trees ─────────────────────────────────────────────────────────────
+        // ── Árboles ───────────────────────────────────────────────────────────
         for (const side of [-1, 1]) {
             const arr = side < 0 ? this._treesL : this._treesR;
             for (const tr of arr) {
@@ -109,7 +157,19 @@ export class OutrunScene {
             }
         }
 
-        // ── Cars ──────────────────────────────────────────────────────────────
+        // ── Carteles (mismo scroll que árboles) ───────────────────────────────
+        for (const side of [-1, 1]) {
+            const arr = side < 0 ? this._signsL : this._signsR;
+            for (const sg of arr) {
+                sg.z += speed;
+                if (sg.z > NEAR_Z + 1) sg.z -= TOTAL_Z;
+                const t = Math.max(0, Math.min(1, (NEAR_Z - sg.z) / (NEAR_Z - FAR_Z)));
+                sg.group.position.z = sg.z;
+                sg.group.position.x = side * sg.sideX + this._curveDrift * t;
+            }
+        }
+
+        // ── Coches ────────────────────────────────────────────────────────────
         for (const car of this._cars) {
             car.z += speed * car.relSpeed;
             if (car.z > NEAR_Z + 2) {
@@ -119,11 +179,10 @@ export class OutrunScene {
             car.group.position.z = car.z;
             car.group.position.x = car.lane * LANE_X + this._curveDrift * t;
         }
-
     }
 
-    onBeat()  { this._beatFlash = 3.5; this._speedBoost += 0.14; }
-    onTap()   { this._beatFlash = 2.0; }
+    onBeat()  { this._beatFlash = 3.5; this._beatPulse = 1.0; this._speedBoost += 0.14; }
+    onTap()   { this._beatFlash = 2.0; this._beatPulse = 0.6; }
     onSwipe(dir) {
         if (dir === 'up')   this._speedBoost += 0.22;
         if (dir === 'down') this._speedBoost = Math.max(0, this._speedBoost - 0.08);
@@ -137,32 +196,39 @@ export class OutrunScene {
             mats.forEach(m => m?.dispose());
         });
         this._group?.parent?.remove(this._group);
-        this._group    = null;
-        this._segs     = [];
-        this._treesL   = [];
-        this._treesR   = [];
-        this._glitters = [];
-        this._cars     = [];
+        this._group     = null;
+        this._segs      = [];
+        this._treesL    = [];
+        this._treesR    = [];
+        this._signsL    = [];
+        this._signsR    = [];
+        this._glitters  = [];
+        this._neonSigns = [];
+        this._cars      = [];
+        this._sunMesh   = null;
+        this._skyMats   = [];
     }
 }
 
 // ── Sky ───────────────────────────────────────────────────────────────────────
 
-function _buildSky(group, glitters) {
-    // Gradient bands: deep indigo → purple → hot pink → orange → yellow horizon
-    const bands = [
-        { y:  22, h: 16, col: '#0d0528' },
-        { y:  10, h:  9, col: '#1a0844' },
-        { y:   4, h:  7, col: '#6b0f5a' },
-        { y:   0, h:  5, col: '#c42060' },
-        { y:  -2, h:  3, col: '#ff6832' },
-        { y: -3.6, h: 2.2, col: '#ffcc44' },
+function _buildSky(group, glitters, skyMats) {
+    // Bandas con colores base y peak (hacia dónde shiftan en el beat)
+    const bandDefs = [
+        { y:  22, h: 16, col: '#0d0528', peak: '#1a0840' },
+        { y:  10, h:  9, col: '#1a0844', peak: '#2d1266' },
+        { y:   4, h:  7, col: '#6b0f5a', peak: '#c01a9a' },
+        { y:   0, h:  5, col: '#c42060', peak: '#ff2878' },
+        { y:  -2, h:  3, col: '#ff6832', peak: '#ff9020' },
+        { y: -3.6, h: 2.2, col: '#ffcc44', peak: '#ffee60' },
     ];
-    for (const { y, h, col } of bands) {
-        _bm(group, 130, h, 0.1, _flat(col), 0, y, -46);
+    for (const { y, h, col, peak } of bandDefs) {
+        const mat = _flat(col);
+        skyMats.push({ mat, base: new THREE.Color(col), peak: new THREE.Color(peak) });
+        _bm(group, 130, h, 0.1, mat, 0, y, -46);
     }
 
-    // Sun (large, off-center like classic Outrun)
+    // Sol
     const sunMat = new THREE.MeshStandardMaterial({
         color: '#ffe600', emissive: '#ffe600', emissiveIntensity: 5.5,
         roughness: 0, metalness: 0,
@@ -171,13 +237,13 @@ function _buildSky(group, glitters) {
     sun.userData.seed = 7;
     glitters.push(sun);
 
-    // Sun horizontal scan lines (classic Outrun detail)
+    // Líneas horizontales del sol (estilo Outrun clásico)
     const scanMat = _flat('#1a0844');
     for (let i = 0; i < 8; i++) {
         _bm(group, 5.4, 0.10, 0.15, scanMat, -2.5, -1.2 + i * 0.28, -45.4);
     }
 
-    // Sun halo glow
+    // Halo del sol
     const haloMat = new THREE.MeshStandardMaterial({
         color: '#ff5020', emissive: '#ff5020', emissiveIntensity: 2.0,
         transparent: true, opacity: 0.32,
@@ -186,7 +252,7 @@ function _buildSky(group, glitters) {
     halo.userData.seed = 13;
     glitters.push(halo);
 
-    // Horizon glow strip
+    // Brillo de horizonte
     const horizMat = new THREE.MeshStandardMaterial({
         color: '#ff8040', emissive: '#ff8040', emissiveIntensity: 1.5,
         transparent: true, opacity: 0.42,
@@ -195,7 +261,7 @@ function _buildSky(group, glitters) {
     horiz.userData.seed = 21;
     glitters.push(horiz);
 
-    // Stars in upper sky
+    // Estrellas
     const starMat = new THREE.MeshStandardMaterial({
         color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 3.0,
         transparent: true, opacity: 0.7,
@@ -209,14 +275,13 @@ function _buildSky(group, glitters) {
         glitters.push(star);
     }
 
-    // Neon palm silhouettes on horizon (far background decorations)
+    // Siluetas de palmeras en el horizonte
     const silMat = _flat('#2a0a44');
     const sil = _seededRand(88);
     for (let i = 0; i < 8; i++) {
         const x = -55 + i * 16 + sil() * 6;
         const h = 4 + sil() * 5;
         _bm(group, 0.22, h, 0.1, silMat, x, ROAD_Y + h / 2, -44.5);
-        // fronds
         for (let l = 0; l < 5; l++) {
             const a = -Math.PI * 0.65 + (l / 4) * Math.PI * 1.3;
             const ll = 0.8 + sil() * 1.4;
@@ -226,6 +291,8 @@ function _buildSky(group, glitters) {
             group.add(leaf);
         }
     }
+
+    return sun;
 }
 
 // ── Mountains ─────────────────────────────────────────────────────────────────
@@ -238,14 +305,13 @@ function _buildMountains(group) {
         const h   = 3.0 + rand() * 5.5;
         const w   = 7.0 + rand() * 11;
         const col = cols[Math.floor(rand() * 4)];
-        // Layered boxes → terraced mountain silhouette (SNES-style)
         _bm(group, w,         h * 0.50, 0.5, _flat(col), x, ROAD_Y + h * 0.25, -41.5);
         _bm(group, w * 0.72,  h * 0.55, 0.5, _flat(col), x, ROAD_Y + h * 0.58, -42);
         _bm(group, w * 0.42,  h * 0.40, 0.5, _flat(col), x, ROAD_Y + h * 0.86, -42.5);
     }
 }
 
-// ── Base ground plane (fills grass beyond segment strips at far distances) ────
+// ── Base ground plane ─────────────────────────────────────────────────────────
 
 function _buildBaseGround(group) {
     _bm(group, 200, 0.06, 100, _flat(GRASS_COLS[0]), 0, ROAD_Y - 0.01, -22);
@@ -260,13 +326,12 @@ function _buildRoad(group, segs) {
         const g      = new THREE.Group();
         g.position.set(0, ROAD_Y, z);
 
-        const road  = _bm(g, ROAD_W,   0.08, SEG_D, _flat(ROAD_COLS[stripe]),    0, 0, 0);
-        const gL    = _bm(g, GRASS_W,  0.06, SEG_D, _flat(GRASS_COLS[stripe]),  -(ROAD_W / 2 + GRASS_W / 2),   -0.01, 0);
-        const gR    = _bm(g, GRASS_W,  0.06, SEG_D, _flat(GRASS_COLS[stripe]),   (ROAD_W / 2 + GRASS_W / 2),   -0.01, 0);
-        const bL    = _bm(g, BORDER_W, 0.10, SEG_D, _flat(BORDER_COLS[stripe]), -(ROAD_W / 2 + BORDER_W / 2),   0.01, 0);
-        const bR    = _bm(g, BORDER_W, 0.10, SEG_D, _flat(BORDER_COLS[stripe]),   (ROAD_W / 2 + BORDER_W / 2),  0.01, 0);
-        // Center dashes: visible every other segment
-        const dash  = _bm(g, 0.18, 0.09, SEG_D * 0.55, _flat('#f0f0f0'), 0, 0.01, 0);
+        const road = _bm(g, ROAD_W,   0.08, SEG_D, _flat(ROAD_COLS[stripe]),    0, 0, 0);
+        const gL   = _bm(g, GRASS_W,  0.06, SEG_D, _flat(GRASS_COLS[stripe]),  -(ROAD_W / 2 + GRASS_W / 2),  -0.01, 0);
+        const gR   = _bm(g, GRASS_W,  0.06, SEG_D, _flat(GRASS_COLS[stripe]),   (ROAD_W / 2 + GRASS_W / 2),  -0.01, 0);
+        const bL   = _bm(g, BORDER_W, 0.10, SEG_D, _flat(BORDER_COLS[stripe]), -(ROAD_W / 2 + BORDER_W / 2),  0.01, 0);
+        const bR   = _bm(g, BORDER_W, 0.10, SEG_D, _flat(BORDER_COLS[stripe]),  (ROAD_W / 2 + BORDER_W / 2),  0.01, 0);
+        const dash = _bm(g, 0.18, 0.09, SEG_D * 0.55, _flat('#f0f0f0'), 0, 0.01, 0);
         dash.visible = stripe === 0;
 
         group.add(g);
@@ -347,19 +412,59 @@ function _buildPalm(parent, rand) {
     }
 }
 
-// Roadside colored poles (occasional checkpoint/marker poles)
 function _buildPole(parent, rand) {
     const stripeCols = ['#cc2200', '#f5f5f5'];
-    const poleMat = _flat('#aaaaaa');
-    _bm(parent, 0.10, 2.8, 0.10, poleMat, 0, 1.4, 0);
-    // Alternating color bands
+    _bm(parent, 0.10, 2.8, 0.10, _flat('#aaaaaa'), 0, 1.4, 0);
     for (let s = 0; s < 5; s++) {
         _bm(parent, 0.12, 0.28, 0.12, _flat(stripeCols[s % 2]), 0, 0.4 + s * 0.52, 0);
     }
-    // Reflective top cap
     const capCols = ['#ff2200', '#00ccff', '#ffcc00'];
-    const cap = _flat(capCols[Math.floor(rand() * 3)]);
-    _bm(parent, 0.22, 0.14, 0.22, cap, 0, 2.87, 0);
+    _bm(parent, 0.22, 0.14, 0.22, _flat(capCols[Math.floor(rand() * 3)]), 0, 2.87, 0);
+}
+
+// ── Carteles de neón (scrollean igual que los árboles) ────────────────────────
+
+function _buildSigns(group, signsArr, neonSigns, side) {
+    const rand    = _seededRand(side > 0 ? 401 : 503);
+    const cols    = ['#ff1a88', '#00aaff', '#ffcc00', '#ff4400', '#aa22ff'];
+    const count   = 4;
+    const spacing = TOTAL_Z / count;
+
+    for (let i = 0; i < count; i++) {
+        const sideX = 8.5 + rand() * 2.5;
+        const z     = FAR_Z + i * spacing + rand() * spacing * 0.4;
+        const col   = cols[Math.floor(rand() * cols.length)];
+        const g     = new THREE.Group();
+        g.position.set(side * sideX, ROAD_Y, z);
+
+        // Poste
+        _bm(g, 0.10, 4.2, 0.10, _flat('#555566'), 0, 2.1, 0);
+
+        // Panel principal
+        const boardMat = new THREE.MeshStandardMaterial({
+            color: col, emissive: col, emissiveIntensity: 2.5,
+            roughness: 0, metalness: 0.5,
+        });
+        const board = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.1, 0.12), boardMat);
+        board.position.set(0, 4.7, 0);
+        g.add(board);
+        neonSigns.push({ mat: boardMat, seed: rand() * 100 });
+
+        // Marcos superior e inferior (blanco neón)
+        for (const fy of [5.27, 4.13]) {
+            const fMat = new THREE.MeshStandardMaterial({
+                color: '#ffffff', emissive: '#ffffff', emissiveIntensity: 2.0,
+                roughness: 0, metalness: 0,
+            });
+            const strip = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.08, 0.16), fMat);
+            strip.position.set(0, fy, 0);
+            g.add(strip);
+            neonSigns.push({ mat: fMat, seed: rand() * 100 });
+        }
+
+        group.add(g);
+        signsArr.push({ group: g, z, sideX });
+    }
 }
 
 // ── Cars ──────────────────────────────────────────────────────────────────────
@@ -375,27 +480,21 @@ function _buildCars(group, cars) {
         const g       = new THREE.Group();
         const bodyMat = _flat(CAR_COLS[i % CAR_COLS.length]);
 
-        // Body
         _bm(g, 1.20, 0.30, 2.20, bodyMat, 0,     0.15, 0);
-        // Cabin
         _bm(g, 0.86, 0.22, 0.95, bodyMat, 0,     0.41, 0.08);
-        // Windshield (front) and rear window
         _bm(g, 0.76, 0.18, 0.05, winMat,  0,     0.41,  0.55);
         _bm(g, 0.76, 0.18, 0.05, winMat,  0,     0.41, -0.39);
-        // Wheel arches (4 corners)
         for (const [wx, wz] of [[-0.56, -0.76], [0.56, -0.76], [-0.56, 0.76], [0.56, 0.76]]) {
             _bm(g, 0.14, 0.16, 0.36, darkMat, wx, -0.02, wz);
         }
-        // Headlights
         _bm(g, 0.18, 0.07, 0.04, _flat('#ffffcc'), -0.38, 0.14,  1.13);
         _bm(g, 0.18, 0.07, 0.04, _flat('#ffffcc'),  0.38, 0.14,  1.13);
-        // Taillights
         _bm(g, 0.18, 0.07, 0.04, _flat('#ff2200'), -0.38, 0.14, -1.13);
         _bm(g, 0.18, 0.07, 0.04, _flat('#ff2200'),  0.38, 0.14, -1.13);
 
         const lane     = (i % 2 === 0) ? -1 : 1;
         const z        = FAR_Z + (i / NUM_CARS) * TOTAL_Z * 0.72;
-        const relSpeed = 0.90 + rand() * 0.25;   // some slower (we pass), some faster (they pass)
+        const relSpeed = 0.90 + rand() * 0.25;
 
         g.position.set(lane * LANE_X, ROAD_Y, z);
         group.add(g);
@@ -420,4 +519,3 @@ function _seededRand(seed) {
     let s = (seed * 9301 + 49297) >>> 0;
     return () => { s = Math.imul(48271, s) >>> 0; return s / 0xffffffff; };
 }
-

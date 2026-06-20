@@ -4,10 +4,12 @@ import { Visualizer }                    from './visualizer.js';
 import { SubtitleEngine }                from './subtitles.js';
 import { loadSongAssets, evictSongAssets } from './loader.js';
 import { computeReactiveData, resetSmoothing } from './audio-reactive.js';
+import { MenuVisualizer }                from './menu-visualizer.js';
 
 // ── DOM references ──────────────────────────────────────────────────────────
 const mainScreen      = document.getElementById('mainScreen');
 const playerScreen    = document.getElementById('playerScreen');
+const menuCanvas      = document.getElementById('menuCanvas');
 const songListEl      = document.getElementById('songList');
 const threeCanvas     = document.getElementById('threeCanvas');
 const subtitleDisplay = document.getElementById('subtitleDisplay');
@@ -21,17 +23,22 @@ const btnNext         = document.getElementById('btnNext');
 const playIcon        = document.getElementById('playIcon');
 
 // ── State ───────────────────────────────────────────────────────────────────
-let currentIndex = -1;
-let isPlaying    = false;
-let audioEngine  = null;
-let visualizer   = null;
-let subtitleEng  = null;
+let currentIndex   = -1;
+let isPlaying      = false;
+let audioEngine    = null;
+let visualizer     = null;
+let subtitleEng    = null;
+let menuVisualizer = null;
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('versionTag').textContent = `v${VERSION}`;
     generateSongList();
     initEventListeners();
+
+    menuVisualizer = new MenuVisualizer(menuCanvas);
+    menuVisualizer.init();
+    menuVisualizer.start();
 });
 
 function generateSongList() {
@@ -91,6 +98,7 @@ async function selectSong(index) {
 
     // Switch to player screen with loading overlay
     mainScreen.classList.add('hidden');
+    menuVisualizer.stop();
     playerScreen.classList.remove('hidden');
     playerScreen.classList.remove('playing');
     loadingOverlay.style.display = 'flex';
@@ -227,6 +235,7 @@ function goBack() {
     _setPlayIcon(false);
     playerScreen.classList.add('hidden');
     mainScreen.classList.remove('hidden');
+    menuVisualizer.start();
     currentIndex = -1;
 }
 

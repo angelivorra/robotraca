@@ -81,9 +81,9 @@ export class JungleScene {
 
         // Bathers walk + scroll
         for (const h of this._bathers) {
-            const t = this._time * 3.2 * h.walkSpeed + h.phase;
+            const t = this._time * 2.6 * h.walkSpeed + h.phase;
             _animateHuman(h.group, t);
-            h.group.position.x -= speed * (0.55 + h.walkSpeed * 0.1);
+            h.group.position.x -= speed * (0.40 + h.walkSpeed * 0.07);
             h.group.position.y = GROUND_Y + Math.abs(Math.sin(t * 2)) * 0.04 * h.group.scale.x;
             if (h.group.position.x < -SCROLL_W / 2 - 1) {
                 h.group.position.x = SCROLL_W / 2 + 1 + Math.random() * 4;
@@ -94,8 +94,8 @@ export class JungleScene {
         // Bikes scroll + wheel spin
         for (const b of this._bikes) {
             b.group.position.x -= speed * b.scrollMult;
-            b.wPF.rotation.z -= speed * 3.2;
-            b.wPR.rotation.z -= speed * 3.2;
+            b.wPF.rotation.z -= speed * b.scrollMult * 3.2;
+            b.wPR.rotation.z -= speed * b.scrollMult * 3.2;
             if (b.group.position.x < -SCROLL_W / 2 - 3) {
                 b.group.position.x = SCROLL_W / 2 + 2 + Math.random() * 6;
                 b.group.position.z = -0.3 + Math.random() * 0.6;
@@ -384,7 +384,7 @@ function _spawnForeground(group, bathers, bikes, theme) {
         const col = BIKE_COLORS[i % BIKE_COLORS.length];
         const pal = PALETTES[(i + 1) % PALETTES.length];
         const b   = _buildBike(group, x, GROUND_Y, z, col, pal);
-        bikes.push({ group: b.root, scrollMult: 1.1 + Math.random() * 0.6, wPF: b.wPF, wPR: b.wPR });
+        bikes.push({ group: b.root, scrollMult: 0.28 + Math.random() * 0.18, wPF: b.wPF, wPR: b.wPR });
     }
 }
 
