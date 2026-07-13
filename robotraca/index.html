@@ -2,182 +2,121 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ROBOTRACA // 8-BIT PLAYER</title>
+
+    <!-- PWA / Add to Home Screen (iOS + Android) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Robotraca - Próximamente</title>
-    <style>
-        @font-face {
-            font-family: 'CustomFont';
-            src: url('css/fuente.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="apple-mobile-web-app-title" content="ROBOTRACA">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f0f1a">
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+    <!-- Three.js via importmap (no npm, no build step) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.167.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.0/examples/jsm/"
         }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'CustomFont', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #000000 0%, #2e0557 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        
-        .container {
-            text-align: center;
-            width: 100%;
-            max-width: 600px;
-            padding: 20px;
-        }
-        
-        .robot-container {
-            position: relative;
-            width: 100%;
-            margin-bottom: 40px;
-        }
-        
-        .robot-head {
-            width: 100%;
-            height: auto;
-            filter: drop-shadow(0 0 30px rgba(0, 255, 255, 0.3));
-        }
-        
-        .eyes-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .eye-wrapper {
-            position: absolute;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            aspect-ratio: 1;
-        }
-        
-        .eye-wrapper.left-eye {
-            left: 30%;
-            top: 35%;
-            width: 12%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .eye-wrapper.right-eye {
-            left: 50%;
-            top: 35%;
-            width: 15%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .eye-img {
-            width: 100%;
-            height: auto;
-            animation: spinEye 3s linear infinite;
-        }
-        
-        @keyframes spinEye {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        
-        .title {
-            font-size: 80px;
-            font-weight: bold;
-            color: #00ffff;
-            text-shadow: 
-                0 0 10px rgba(0, 255, 255, 0.8),
-                0 0 20px rgba(0, 255, 255, 0.6),
-                0 0 30px rgba(0, 255, 255, 0.4);
-            letter-spacing: 15px;
-            margin-bottom: 30px;
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-            from {
-                text-shadow: 
-                    0 0 10px rgba(0, 255, 255, 0.8),
-                    0 0 20px rgba(0, 255, 255, 0.6),
-                    0 0 30px rgba(0, 255, 255, 0.4);
-            }
-            to {
-                text-shadow: 
-                    0 0 20px rgba(0, 255, 255, 1),
-                    0 0 30px rgba(0, 255, 255, 0.8),
-                    0 0 40px rgba(0, 255, 255, 0.6),
-                    0 0 50px rgba(0, 255, 255, 0.4);
-            }
-        }
-        
-        .subtitle {
-            font-size: 40px;
-            color: #ffffff;
-            text-shadow: 
-                0 0 10px rgba(255, 255, 255, 0.5),
-                0 0 20px rgba(0, 255, 255, 0.3);
-            letter-spacing: 8px;
-            opacity: 0.9;
-        }
-        
-        @media (max-width: 768px) {
-            .title {
-                font-size: 60px;
-                letter-spacing: 10px;
-            }
-            
-            .subtitle {
-                font-size: 30px;
-                letter-spacing: 5px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .title {
-                font-size: 40px;
-                letter-spacing: 8px;
-            }
-            
-            .subtitle {
-                font-size: 24px;
-                letter-spacing: 4px;
-            }
-        }
-    </style>
+    }
+    </script>
 </head>
 <body>
-    <div class="container">
-        <div class="robot-container">
-            <img src="images/robot/cabeza.png" alt="Robot Head" class="robot-head">
-            
-            <div class="eyes-container">
-                <div class="eye-wrapper left-eye">
-                    <img src="images/robot/ojo_izquierdo.png" alt="Left Eye" class="eye-img">
-                </div>
-                
-                <div class="eye-wrapper right-eye">
-                    <img src="images/robot/ojo_derecho.png" alt="Right Eye" class="eye-img">
-                </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MAIN SCREEN — Song list
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="screen main-screen" id="mainScreen">
+        <canvas id="menuCanvas"></canvas>
+        <header class="header-8bit">
+            <h1 class="title-8bit">ROBOTRACA</h1>
+            <p class="subtitle-8bit">♪ SELECT YOUR TRACK ♪</p>
+        </header>
+
+        <div class="song-list" id="songList">
+            <!-- Generated by player.js -->
+        </div>
+
+        <footer class="footer-8bit">
+            <span class="blink">► PRESS TO PLAY ◄</span>
+            <span class="version-tag" id="versionTag"></span>
+        </footer>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PLAYER SCREEN — Three.js canvas + controls
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="screen player-screen hidden" id="playerScreen">
+
+        <!-- Three.js renders here (z-index: 0) -->
+        <canvas id="threeCanvas"></canvas>
+
+        <!-- Beat flash overlay (brief white pulse on each beat) -->
+        <div id="beatFlash" class="beat-flash"></div>
+
+        <!-- Subtitle display (above the canvas, below buttons) -->
+        <div id="subtitleDisplay" class="subtitle-display"></div>
+
+        <!-- Loading overlay (shown while assets are fetching) -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <p class="loading-text">LOADING...</p>
+            <div class="loading-bar-track">
+                <div id="loadingBar" class="loading-bar"></div>
             </div>
         </div>
-        
-        <h1 class="title">ROBOTRACA</h1>
-        <p class="subtitle">PRÓXIMAMENTE</p>
+
+        <!-- Controls (same positions as original) -->
+        <button class="btn-8bit btn-back" id="btnBack" aria-label="Volver">
+            <span class="btn-icon">←</span>
+            <span class="btn-text">BACK</span>
+        </button>
+
+        <button class="btn-8bit btn-play" id="btnPlay" aria-label="Reproducir">
+            <span class="btn-icon" id="playIcon">▶</span>
+        </button>
+
+        <button class="btn-8bit btn-prev" id="btnPrev" aria-label="Anterior">
+            <span class="btn-icon">◀◀</span>
+        </button>
+
+        <button class="btn-8bit btn-next" id="btnNext" aria-label="Siguiente">
+            <span class="btn-icon">▶▶</span>
+        </button>
     </div>
+
+    <!-- Fullscreen button (hidden if Fullscreen API not supported) -->
+    <button id="btnFullscreen" class="btn-fullscreen" aria-label="Pantalla completa" style="display:none">⛶</button>
+
+    <!-- Entry point (type=module picks up the importmap) -->
+    <script type="module" src="js/player.js"></script>
+    <script>
+        // Fullscreen button — show only if API is available
+        const btnFs = document.getElementById('btnFullscreen');
+        if (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen) {
+            btnFs.style.display = 'flex';
+            btnFs.addEventListener('click', () => {
+                const el = document.documentElement;
+                const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+                if (!fsEl) {
+                    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+                    btnFs.textContent = '⊠';
+                } else {
+                    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                    btnFs.textContent = '⛶';
+                }
+            });
+            document.addEventListener('fullscreenchange', () => {
+                btnFs.textContent = document.fullscreenElement ? '⊠' : '⛶';
+            });
+            document.addEventListener('webkitfullscreenchange', () => {
+                btnFs.textContent = document.webkitFullscreenElement ? '⊠' : '⛶';
+            });
+        }
+    </script>
 </body>
 </html>
