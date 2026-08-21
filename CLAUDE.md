@@ -2,21 +2,21 @@
 
 ## ¿Qué es esto?
 
-Robotraca es un reproductor musical con videoclips 3D para canciones de un grupo de música. El proyecto activo vive en la **raíz del repositorio** (se sirve como GitHub Pages en `https://angelivorra.github.io/robotraca/`) — los demás directorios (`old_robotraca/`, `reciever/`) son versiones antiguas que ya no se usan.
+Robotraca es un reproductor musical con videoclips 3D para canciones de un grupo de música. El proyecto activo vive en **`robotraca/`** (se sirve como GitHub Pages en `https://angelivorra.github.io/robotraca/robotraca/`) — los demás directorios (`old_robotraca/`, `reciever/`) son versiones antiguas que ya no se usan.
 
 ## Cómo ejecutarlo
 
-No hay build step. Servidor HTTP estático apuntando a la raíz del repo:
+No hay build step. Servidor HTTP estático apuntando a `robotraca/`:
 
 ```bash
-python -m http.server 8080
+cd robotraca && python -m http.server 8080
 # Abrir http://localhost:8080
 ```
 
 ## Arquitectura
 
 ```
-./
+robotraca/
 ├── index.html              Punto de entrada, meta tags PWA
 ├── manifest.json           Configuración "Add to Home Screen" (iOS/Android)
 ├── css/styles.css          Estilos — tema retro pixel art
