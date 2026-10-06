@@ -5,6 +5,7 @@ import { SubtitleEngine }                from './subtitles.js';
 import { loadSongAssets, evictSongAssets } from './loader.js';
 import { computeReactiveData, resetSmoothing } from './audio-reactive.js';
 import { MenuVisualizer }                from './menu-visualizer.js';
+import { PlayCounter }                   from './stats.js';
 
 // ── DOM references ──────────────────────────────────────────────────────────
 const mainScreen      = document.getElementById('mainScreen');
@@ -29,6 +30,7 @@ let audioEngine    = null;
 let visualizer     = null;
 let subtitleEng    = null;
 let menuVisualizer = null;
+let playCounter    = null;
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -95,6 +97,7 @@ async function selectSong(index) {
     // gesture context and Safari silently refuses to produce audio.
     audioEngine = new AudioEngine();
     audioEngine.init();
+    playCounter = new PlayCounter(song.id, song.title);
 
     // Switch to player screen with loading overlay
     mainScreen.classList.add('hidden');
@@ -183,6 +186,7 @@ async function play() {
     };
 
     visualizer.start();
+    playCounter?.start();
     isPlaying = true;
     _setPlayIcon(true);
     playerScreen.classList.add('playing');
@@ -191,6 +195,7 @@ async function play() {
 function pause() {
     if (!audioEngine) return;
     audioEngine.pause();   // sets audioEngine.isPlaying = false before source.stop()
+    playCounter?.pause();
     isPlaying = false;
     visualizer.stop();
     _setPlayIcon(false);
@@ -198,6 +203,7 @@ function pause() {
 }
 
 function _handleEnded() {
+    playCounter?.pause();
     isPlaying = false;
     visualizer?.stop();
     _setPlayIcon(false);
@@ -216,6 +222,8 @@ function _teardown() {
     }
     // Dispose runtime objects first (detaches GLTF model from Three.js scene,
     // disposes scene geometry, closes AudioContext)
+    playCounter?.pause();
+    playCounter = null;
     audioEngine?.dispose();
     visualizer?.dispose();
     audioEngine = null;

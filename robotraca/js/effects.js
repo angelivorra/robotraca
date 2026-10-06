@@ -19,7 +19,7 @@ export class TapBurstEffect {
         geoC.setAttribute('position', new THREE.BufferAttribute(posC, 3));
         this._matCore = new THREE.PointsMaterial({
             color: 0xffffff,
-            size:  0.18,
+            size:  0.09,
             transparent: true, opacity: 0,
             sizeAttenuation: true,
             blending:   THREE.AdditiveBlending,
@@ -37,7 +37,7 @@ export class TapBurstEffect {
         geoG.setAttribute('position', new THREE.BufferAttribute(posG, 3));
         this._matGlow = new THREE.PointsMaterial({
             color: new THREE.Color(primaryColor),
-            size:  0.55,
+            size:  0.275,
             transparent: true, opacity: 0,
             sizeAttenuation: true,
             blending:   THREE.AdditiveBlending,
@@ -69,9 +69,9 @@ export class TapBurstEffect {
 
         for (let i = 0; i < this._count; i++) {
             const i3 = i * 3;
-            posC[i3]   = OX + (Math.random() - 0.5) * 0.25;
-            posC[i3+1] = OY + (Math.random() - 0.5) * 0.25;
-            posC[i3+2] = OZ + (Math.random() - 0.5) * 0.15;
+            posC[i3]   = OX + (Math.random() - 0.5) * 0.125;
+            posC[i3+1] = OY + (Math.random() - 0.5) * 0.125;
+            posC[i3+2] = OZ + (Math.random() - 0.5) * 0.075;
             posG[i3]   = posC[i3];
             posG[i3+1] = posC[i3+1];
             posG[i3+2] = posC[i3+2];
@@ -79,14 +79,14 @@ export class TapBurstEffect {
             // Velocity: contained burst (~half screen spread max)
             const theta = Math.random() * Math.PI * 2;
             const phi   = Math.acos(2 * Math.random() - 1);
-            const spd   = 0.018 + Math.random() * 0.055;
+            const spd   = 0.009 + Math.random() * 0.0275;
             this._vel[i3]   = Math.sin(phi) * Math.cos(theta) * spd;
             this._vel[i3+1] = Math.sin(phi) * Math.sin(theta) * spd * 0.6;
-            this._vel[i3+2] = Math.abs(Math.cos(phi)) * spd * 0.4 + 0.008;
+            this._vel[i3+2] = Math.abs(Math.cos(phi)) * spd * 0.4 + 0.004;
 
             // Initial jitter (randomized each frame → electric zigzag)
-            this._jitter[i3]   = (Math.random() - 0.5) * 0.018;
-            this._jitter[i3+1] = (Math.random() - 0.5) * 0.018;
+            this._jitter[i3]   = (Math.random() - 0.5) * 0.009;
+            this._jitter[i3+1] = (Math.random() - 0.5) * 0.009;
             this._jitter[i3+2] = 0;
         }
         this._core.geometry.attributes.position.needsUpdate = true;
@@ -106,7 +106,7 @@ export class TapBurstEffect {
             const i3 = i * 3;
 
             posC[i3]   += this._vel[i3]   + this._jitter[i3];
-            posC[i3+1] += this._vel[i3+1] + this._jitter[i3+1] - 0.004; // gravity
+            posC[i3+1] += this._vel[i3+1] + this._jitter[i3+1] - 0.002; // gravity
             posC[i3+2] += this._vel[i3+2];
 
             posG[i3]   = posC[i3];
@@ -114,8 +114,8 @@ export class TapBurstEffect {
             posG[i3+2] = posC[i3+2];
 
             // Re-randomize jitter every frame → electric zigzag
-            this._jitter[i3]   = (Math.random() - 0.5) * 0.016;
-            this._jitter[i3+1] = (Math.random() - 0.5) * 0.016;
+            this._jitter[i3]   = (Math.random() - 0.5) * 0.008;
+            this._jitter[i3+1] = (Math.random() - 0.5) * 0.008;
         }
         this._core.geometry.attributes.position.needsUpdate = true;
         this._glow.geometry.attributes.position.needsUpdate = true;
@@ -148,7 +148,7 @@ export class RingPulseEffect {
         this._timer  = 0;
         this._active = false;
 
-        const geo = new THREE.RingGeometry(0.1, 0.35, 64);
+        const geo = new THREE.RingGeometry(0.05, 0.175, 64);
         this._mat = new THREE.MeshBasicMaterial({
             color:       new THREE.Color(primaryColor),
             transparent: true,
@@ -177,7 +177,7 @@ export class RingPulseEffect {
             position ? position.z : 1.5
         );
         this._mesh.visible = true;
-        this._mesh.scale.setScalar(0.2);
+        this._mesh.scale.setScalar(0.1);
         this._mat.opacity = 1.0;
     }
 
@@ -186,7 +186,7 @@ export class RingPulseEffect {
         this._timer += delta;
         const progress = this._timer / 0.55;
 
-        this._mesh.scale.setScalar(0.2 + progress * 5.5);
+        this._mesh.scale.setScalar(0.1 + progress * 2.75);
         this._mat.opacity = Math.max(0, 1 - progress);
 
         if (progress >= 1) {

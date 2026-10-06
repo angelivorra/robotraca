@@ -1,19 +1,41 @@
 import { TunnelScene }      from './tunnel.js';
 import { SpaceScene }       from './space.js';
 import { CityScene }        from './city.js';
-import { SpaceshipScene }   from './spaceship.js';
+import { DoomScene }        from './doom.js';
 import { ApocalypseScene }  from './apocalypse.js';
 import { JungleScene }      from './jungle.js';
 import { OutrunScene }      from './outrun.js';
+import { NeonScene }        from './neon.js';
+import { MegacityScene }    from './megacity.js';
+import { SynthGridScene }   from './synthgrid.js';
+import { MatrixScene }      from './matrix.js';
+import { ClubScene } from './club.js';
+import { CubesScene } from './cubes.js';
+import { RingsScene } from './rings.js';
+import { CrtWallScene } from './crtwall.js';
+import { CircuitScene } from './circuit.js';
+import { WarpScene } from './warp.js';
+import { VaporwaveScene } from './vaporwave.js';
 
 const REGISTRY = {
     tunnel:     TunnelScene,
     space:      SpaceScene,
     city:       CityScene,
-    spaceship:  SpaceshipScene,
+    doom:       DoomScene,
     apocalypse: ApocalypseScene,
     jungle:     JungleScene,
     outrun:     OutrunScene,
+    neon:       NeonScene,
+    megacity:   MegacityScene,
+    synthgrid:  SynthGridScene,
+    matrix:     MatrixScene,
+    club: ClubScene,
+    cubes: CubesScene,
+    rings: RingsScene,
+    crtwall: CrtWallScene,
+    circuit: CircuitScene,
+    warp: WarpScene,
+    vaporwave: VaporwaveScene,
 };
 
 export function createScene(name) {

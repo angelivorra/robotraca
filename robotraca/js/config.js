@@ -1,4 +1,15 @@
-export const VERSION = '1.1';
+export const VERSION = '1.3';
+
+// Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
+// contador privado de reproducciones. Vacío = contador desactivado.
+export const GOATCOUNTER_CODE = 'robotraca';
+
+// Fondos disponibles: cada vez que se abre una canción se elige uno al azar.
+const BACKGROUNDS = [
+    'city', 'outrun', 'jungle', 'apocalypse', 'tunnel', 'space',
+    'neon', 'megacity', 'synthgrid', 'matrix', 'vaporwave',
+    'warp', 'circuit', 'crtwall', 'rings', 'cubes', 'club', 'doom',
+];
 
 export const SONGS = [
     {
@@ -10,7 +21,7 @@ export const SONGS = [
         coverArt:  'img/abduccion.png',
         background: null,
 
-        scenes:  ['city'],
+        scenes:  BACKGROUNDS,
         objects: ['songs/abduccion/model.glb'],
 
         theme: {
@@ -32,7 +43,7 @@ export const SONGS = [
         coverArt:  'img/energia.png',
         background: null,
 
-        scenes:  ['jungle'],
+        scenes:  BACKGROUNDS,
         objects: ['songs/energia/model.glb'],
 
         theme: {
@@ -54,7 +65,7 @@ export const SONGS = [
         coverArt:  'img/tontos.png',
         background: null,
 
-        scenes:  ['apocalypse'],
+        scenes:  BACKGROUNDS,
         objects: ['songs/tontos/model.glb'],
 
         theme: {
@@ -76,7 +87,7 @@ export const SONGS = [
         coverArt:  'img/sarten.png',
         background: null,
 
-        scenes:  ['outrun'],
+        scenes:  BACKGROUNDS,
         objects: ['songs/sarten/model.glb'],
 
         theme: {
@@ -87,6 +98,28 @@ export const SONGS = [
             cameraDistance: 5,
             modelEmissive:  false,
             modelPosition:  [0, 1.6, 0],
+        }
+    },
+    {
+        id:       'atodoquesi',
+        title:    'A TODO QUE SI',
+        duration: '1:10',
+        audio:     'songs/atodoquesi/audio.mp3',
+        subtitles: 'songs/atodoquesi/subtitles.srt',
+        coverArt:  'img/alien-test.png',
+        background: null,
+
+        scenes:  BACKGROUNDS,
+        objects: ['songs/abduccion/model.glb'],
+
+        theme: {
+            bgColor:        '#020203',
+            primaryColor:   '#7fff6b',
+            secondaryColor: '#ff8c3c',
+            modelBaseScale: 0.45,
+            cameraDistance: 5,
+            modelEmissive:  false,
+            modelPosition:  [0, 0.2, 0],
         }
     }
 ];
