@@ -1,4 +1,4 @@
-export const VERSION = '1.4';
+export const VERSION = '1.5';
 
 // Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
 // contador privado de reproducciones. Vacío = contador desactivado.
@@ -98,6 +98,28 @@ export const SONGS = [
             cameraDistance: 5,
             modelEmissive:  false,
             modelPosition:  [0, 1.6, 0],
+        }
+    },
+    {
+        id:       'atodoquesi',
+        title:    'A TODO QUE SI',
+        duration: '1:08',
+        audio:     'songs/atodoquesi/audio.mp3?v=2',
+        subtitles: 'songs/atodoquesi/subtitles.srt',
+        coverArt:  null,
+        background: null,
+
+        scenes:  BACKGROUNDS,
+        objects: ['songs/abduccion/model.glb'],
+
+        theme: {
+            bgColor:        '#0a0500',
+            primaryColor:   '#ffcc00',
+            secondaryColor: '#ff4500',
+            modelBaseScale: 1.0,
+            cameraDistance: 5,
+            modelEmissive:  false,
+            modelPosition:  [0, 1.3, 0],
         }
     }
 ];
