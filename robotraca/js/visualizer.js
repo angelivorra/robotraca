@@ -105,6 +105,8 @@ export class Visualizer {
 
         // Pick & init scene
         this._sceneList  = songConfig.scenes?.length ? songConfig.scenes : ['space'];
+        const forced     = new URLSearchParams(location.search).get('scene');  // ?scene=city fuerza el fondo
+        if (forced) this._sceneList = [forced];
         this._sceneIndex = Math.floor(Math.random() * this._sceneList.length);
         this._initScene(this._sceneList[this._sceneIndex]);
 

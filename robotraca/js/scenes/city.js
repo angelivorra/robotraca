@@ -21,6 +21,7 @@ export class CityScene {
         this._speedBoost    = 0;
         this._beatFlash     = 0;
         this._beatSweep     = 2.0;
+        this._beatCount     = 0;     // alterna qué pisos se encienden en cada beat
         this._beatFill      = 1.0;   // empieza lleno; se resetea a 0 en cada beat
         this._time          = 0;
         this._useBloom      = false;
@@ -138,7 +139,7 @@ export class CityScene {
                     const sy    = (s + 0.5) * (h / numStrips) + 0.1;
                     const syN   = (s + 0.5) / numStrips;   // 0=planta baja, 1=azotea
                     const strip = new THREE.Mesh(
-                        new THREE.BoxGeometry(w + 0.06, 0.04, d + 0.06),
+                        new THREE.BoxGeometry(w + 0.08, 0.1, d + 0.08),
                         new THREE.MeshStandardMaterial({
                             color: neonColor, emissive: neonColor,
                             emissiveIntensity: 0.8, roughness: 0.0, metalness: 1.0,
@@ -147,6 +148,18 @@ export class CityScene {
                     strip.position.set(bx, sy, 0);
                     rowGroup.add(strip);
                     reactive.push({ mesh: strip, sy: syN, bPhase, fillDelay, type: 'strip', col: neonColor.clone() });
+
+                    // Banda LED: franja luminosa aditiva que cubre medio piso y late con el beat
+                    const band = new THREE.Mesh(
+                        new THREE.BoxGeometry(w + 0.03, (h / numStrips) * 0.45, d + 0.03),
+                        new THREE.MeshBasicMaterial({
+                            color: neonColor.clone(), transparent: true, opacity: 0.05,
+                            blending: THREE.AdditiveBlending, depthWrite: false,
+                        })
+                    );
+                    band.position.set(bx, sy, 0);
+                    rowGroup.add(band);
+                    reactive.push({ mesh: band, sy: syN, floor: s, bPhase, fillDelay, type: 'band', col: neonColor.clone() });
                 }
 
                 // ── Aristas verticales de neón ─────────────────────
@@ -156,7 +169,7 @@ export class CityScene {
                 });
                 for (const ex of [-w / 2 + 0.01, w / 2 - 0.01]) {
                     const edge = new THREE.Mesh(
-                        new THREE.BoxGeometry(0.04, h, 0.04),
+                        new THREE.BoxGeometry(0.08, h, 0.08),
                         edgeMat.clone()
                     );
                     edge.position.set(bx + ex, h / 2, d / 2);
@@ -303,7 +316,7 @@ export class CityScene {
             if (group.position.z > WRAP_Z) group.position.z -= TOTAL_Z;
 
             for (const el of meshes) {
-                const { mesh, sy, bPhase, fillDelay, type, col } = el;
+                const { mesh, sy, floor, bPhase, fillDelay, type, col } = el;
 
                 // Ola piso a piso: cada edificio tiene su propio desfase
                 const adjFill = Math.max(0, this._beatFill - fillDelay);
@@ -318,11 +331,21 @@ export class CityScene {
                 const sweepDist = sweepActive ? Math.abs(sy - this._beatSweep) : 2;
                 const sweep     = Math.max(0, 1.0 - sweepDist * 14) * 4.0;
 
+                if (type === 'band') {
+                    // Pulso LED: pisos alternos en cada beat + ola + graves continuos
+                    const pulse = Math.min(1, bf / 5);
+                    const on    = (floor + this._beatCount) % 2 === 0 ? 1.0 : 0.3;
+                    mesh.material.opacity = Math.min(0.85,
+                        0.05 + pulse * 0.55 * on + floorGlow * 0.08 + sweep * 0.1 + reactive.bassEnergy * 0.2);
+                    mesh.material.color.lerpColors(col, this._white, pulse * 0.45);
+                    continue;
+                }
+
                 let intensity;
 
                 if (type === 'strip') {
                     const wave = (Math.sin(t * 5.0 - sy * Math.PI * 3.0 + bPhase) + 1) * 0.5;
-                    intensity  = 0.03 + wave * 0.12 + scan * 0.3 + sweep + floorGlow + bf * (0.6 + sy * 1.2);
+                    intensity  = 0.2 + wave * 0.15 + scan * 0.3 + sweep + floorGlow + bf * (0.6 + sy * 1.2) + reactive.bassEnergy * 1.5;
                     const colorMix = (Math.sin(t * 0.8 + sy * Math.PI + bPhase * 0.5) + 1) * 0.5;
                     mesh.material.emissive.lerpColors(
                         this._primaryCol, this._secondaryCol, colorMix * (0.5 + bf * 0.07));
@@ -379,7 +402,7 @@ export class CityScene {
     }
 
     onTap()  { this._beatFlash = 2.5; this._beatSweep = 0.0; this._beatFill = 0.0; }
-    onBeat() { this._beatFlash = 5.0; this._beatSweep = 0.0; this._beatFill = 0.0; }
+    onBeat() { this._beatCount++; this._beatFlash = 5.0; this._beatSweep = 0.0; this._beatFill = 0.0; }
 
     // ── Limpieza ──────────────────────────────────────────────────────────────
 
