@@ -1,15 +1,8 @@
-export const VERSION = '2.8';
+export const VERSION = '3.2';
 
 // Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
 // contador privado de reproducciones. Vacío = contador desactivado.
 export const GOATCOUNTER_CODE = 'robotraca';
-
-// Fondos disponibles: cada vez que se abre una canción se elige uno al azar.
-const BACKGROUNDS = [
-    'city', 'outrun', 'jungle', 'apocalypse', 'tunnel', 'space',
-    'neon', 'megacity', 'synthgrid', 'matrix', 'vaporwave',
-    'warp', 'circuit', 'crtwall', 'rings', 'cubes', 'club', 'doom',
-];
 
 export const SONGS = [
     {
@@ -21,8 +14,8 @@ export const SONGS = [
         coverArt:  'img/abduccion.png',
         background: null,
 
-        scenes:  BACKGROUNDS,
-        objects: ['songs/abduccion/model.glb'],
+        scenes:  ['megacity'],
+        objects: ['models/robot.glb'],
 
         theme: {
             bgColor:        '#050010',
@@ -43,8 +36,8 @@ export const SONGS = [
         coverArt:  'img/energia.png',
         background: null,
 
-        scenes:  BACKGROUNDS,
-        objects: ['songs/energia/model.glb'],
+        scenes:  ['rings'],
+        objects: ['models/robot.glb'],
 
         theme: {
             bgColor:        '#000a1a',
@@ -65,8 +58,8 @@ export const SONGS = [
         coverArt:  'img/tontos.png',
         background: null,
 
-        scenes:  BACKGROUNDS,
-        objects: ['songs/tontos/model.glb'],
+        scenes:  ['outrun'],
+        objects: ['models/robot.glb'],
 
         theme: {
             bgColor:        '#001a05',
@@ -87,8 +80,8 @@ export const SONGS = [
         coverArt:  'img/sarten.png',
         background: null,
 
-        scenes:  BACKGROUNDS,
-        objects: ['songs/sarten/model.glb'],
+        scenes:  ['club'],
+        objects: ['models/robot.glb'],
 
         theme: {
             bgColor:        '#1a0500',
@@ -109,8 +102,8 @@ export const SONGS = [
         coverArt:  null,
         background: null,
 
-        scenes:  BACKGROUNDS,
-        objects: ['songs/atodoquesi/model.glb'],
+        scenes:  ['crtwall'],
+        objects: ['models/robot.glb'],
 
         theme: {
             bgColor:        '#0a0500',
@@ -119,7 +112,6 @@ export const SONGS = [
             modelBaseScale: 1.0,
             cameraDistance: 5,
             modelEmissive:  false,
-            faceFront:     true,   // sin giro automatico: vuelve a mirar al frente
             modelPosition:  [0, 1.3, 0],
         }
     }

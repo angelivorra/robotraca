@@ -287,23 +287,19 @@ export class Visualizer {
             this._dragVelocity.x *= 0.92;
             this._dragVelocity.y *= 0.92;
             this._modelGroup.rotation.x += this._dragVelocity.x;
-            if (this._theme.faceFront) {
-                // No constant spin: after a moment without touch, ease back to facing the camera
-                this._idleTime += delta;
-                this._modelGroup.rotation.y += this._dragVelocity.y;
-                if (this._idleTime > 1.0) {
-                    const k = 1 - Math.exp(-3 * delta);
-                    const ry = this._modelGroup.rotation.y;
-                    const target = Math.round(ry / (Math.PI * 2)) * Math.PI * 2;
-                    this._modelGroup.rotation.y += (target - ry) * k;
-                    this._modelGroup.rotation.x += (0 - this._modelGroup.rotation.x) * k;
-                }
-                this._isIdle = !this._isPressing && this._idleTime > 1.5 &&
-                    Math.abs(this._modelGroup.rotation.y - Math.round(this._modelGroup.rotation.y / (Math.PI * 2)) * Math.PI * 2) < 0.05 &&
-                    Math.abs(this._modelGroup.rotation.x) < 0.05;
-            } else {
-                this._modelGroup.rotation.y += this._dragVelocity.y + 0.005;
+            // No constant spin: after a moment without touch, ease back to facing the camera
+            this._idleTime += delta;
+            this._modelGroup.rotation.y += this._dragVelocity.y;
+            if (this._idleTime > 1.0) {
+                const k = 1 - Math.exp(-3 * delta);
+                const ry = this._modelGroup.rotation.y;
+                const target = Math.round(ry / (Math.PI * 2)) * Math.PI * 2;
+                this._modelGroup.rotation.y += (target - ry) * k;
+                this._modelGroup.rotation.x += (0 - this._modelGroup.rotation.x) * k;
             }
+            this._isIdle = !this._isPressing && this._idleTime > 1.5 &&
+                Math.abs(this._modelGroup.rotation.y - Math.round(this._modelGroup.rotation.y / (Math.PI * 2)) * Math.PI * 2) < 0.05 &&
+                Math.abs(this._modelGroup.rotation.x) < 0.05;
         } else {
             this._idleTime = 0;
             this._isIdle = false;
