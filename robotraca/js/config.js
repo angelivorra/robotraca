@@ -1,4 +1,4 @@
-export const VERSION = '1.5';
+export const VERSION = '1.8';
 
 // Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
 // contador privado de reproducciones. Vacío = contador desactivado.
@@ -14,7 +14,7 @@ const BACKGROUNDS = [
 export const SONGS = [
     {
         id:       'abduccion',
-        title:    'ESTO ES UNA ABDUCCION',
+        title:    'ABDUCCION',
         duration: '1:18',
         audio:     'songs/abduccion/audio.mp3',
         subtitles: 'songs/abduccion/subtitles.srt',
@@ -58,7 +58,7 @@ export const SONGS = [
     },
     {
         id:       'tontos',
-        title:    'QUE TONTOS SON',
+        title:    'TONTOS',
         duration: '1:37',
         audio:     'songs/tontos/audio.mp3',
         subtitles: 'songs/tontos/subtitles.srt',
@@ -102,7 +102,7 @@ export const SONGS = [
     },
     {
         id:       'atodoquesi',
-        title:    'A TODO QUE SI',
+        title:    'ATODOQUESI',
         duration: '1:08',
         audio:     'songs/atodoquesi/audio.mp3?v=2',
         subtitles: 'songs/atodoquesi/subtitles.srt',

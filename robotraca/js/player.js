@@ -41,7 +41,21 @@ document.addEventListener('DOMContentLoaded', () => {
     menuVisualizer = new MenuVisualizer(menuCanvas);
     menuVisualizer.init();
     menuVisualizer.start();
+
+    // Enlace directo: #<id> abre esa canción
+    window.addEventListener('hashchange', openFromHash);
+    openFromHash();
 });
+
+function openFromHash() {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const i  = SONGS.findIndex(s => s.id === id);
+    if (i === -1) {
+        if (!id && currentIndex !== -1) goBack();
+        return;
+    }
+    if (i !== currentIndex) selectSong(i);
+}
 
 function generateSongList() {
     songListEl.innerHTML = '';
@@ -91,6 +105,7 @@ async function selectSong(index) {
 
     currentIndex = index;
     const song   = SONGS[index];
+    if (location.hash.slice(1) !== song.id) history.replaceState(null, '', `#${song.id}`);
 
     // iOS Safari requires AudioContext to be created synchronously within the
     // user gesture — before any await. Creating it after an await loses the
@@ -245,6 +260,7 @@ function goBack() {
     mainScreen.classList.remove('hidden');
     menuVisualizer.start();
     currentIndex = -1;
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
 }
 
 function prevSong() {
