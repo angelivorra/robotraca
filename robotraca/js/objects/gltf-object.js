@@ -44,6 +44,26 @@ export class GltfObject {
         model.position.sub(center);
         if (maxDim > 0) model.scale.setScalar(2 / maxDim);
 
+        // Cheaper shading for modest phones: Lambert with the base colour only. The PBR
+        // maps (normal, metal/roughness) cost a lot of fill-rate for little visible gain.
+        const cheap = new Map();
+        model.traverse(child => {
+            if (!child.isMesh) return;
+            const list = Array.isArray(child.material) ? child.material : [child.material];
+            const out = list.map(m => {
+                if (!m || m.isMeshLambertMaterial) return m;
+                if (!cheap.has(m)) {
+                    cheap.set(m, new THREE.MeshLambertMaterial({
+                        name: m.name, map: m.map, color: m.color, side: m.side,
+                        transparent: m.transparent, opacity: m.opacity, alphaTest: m.alphaTest,
+                    }));
+                    m.dispose();
+                }
+                return cheap.get(m);
+            });
+            child.material = Array.isArray(child.material) ? out : out[0];
+        });
+
         const emissiveEnabled = theme.modelEmissive !== false;
         const primary   = new THREE.Color(theme.primaryColor);
         const secondary = new THREE.Color(theme.secondaryColor);

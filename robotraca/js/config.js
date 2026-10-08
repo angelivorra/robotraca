@@ -1,4 +1,4 @@
-export const VERSION = '3.2';
+export const VERSION = '3.8';
 
 // Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
 // contador privado de reproducciones. Vacío = contador desactivado.
@@ -58,7 +58,7 @@ export const SONGS = [
         coverArt:  'img/tontos.png',
         background: null,
 
-        scenes:  ['outrun'],
+        scenes:  ['circuit'],
         objects: ['models/robot.glb'],
 
         theme: {
@@ -80,7 +80,7 @@ export const SONGS = [
         coverArt:  'img/sarten.png',
         background: null,
 
-        scenes:  ['club'],
+        scenes:  ['apocalypse'],
         objects: ['models/robot.glb'],
 
         theme: {

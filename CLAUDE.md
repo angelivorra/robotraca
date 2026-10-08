@@ -161,8 +161,8 @@ La escena Outrun curva la carretera sin mover la cámara: cada segmento recibe u
 |---|---|---|
 | `abduccion` | `megacity` | |
 | `energia` | `rings` | |
-| `tontos` | `outrun` | Carretera con curvas y coches |
-| `sarten` | `club` | |
+| `tontos` | `circuit` | |
+| `sarten` | `apocalypse` | |
 | `atodoquesi` | `crtwall` | Pared de teles CRT; robot con boca/ojos animados |
 
 El fondo de cada canción es fijo (un solo elemento en `scenes`). El robot (`models/robot.glb`) es común a todas.

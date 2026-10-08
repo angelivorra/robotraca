@@ -201,3 +201,123 @@ export class RingPulseEffect {
         this._mesh.parent?.remove(this._mesh);
     }
 }
+
+/**
+ * Pixel-art ripple: where you touch, a ring of chunky pixels spreads out, displacing and
+ * posterizing the image underneath.
+ *
+ * Cheap on purpose: no full-screen post-processing. After the normal render we copy just a
+ * small square of the framebuffer around the touch into a texture, then redraw that square
+ * with a shader. Nothing is drawn or copied while the effect is idle.
+ */
+export class PixelRippleEffect {
+    constructor(renderer) {
+        this._renderer = renderer;
+        this._active   = false;
+        this._timer    = 0;
+        this._tex      = null;
+        this._rect     = { x: 0, y: 0, size: 0 };   // drawing-buffer pixels
+
+        this._cam   = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        this._scene = new THREE.Scene();
+        this._mat   = new THREE.ShaderMaterial({
+            depthTest: false, depthWrite: false,
+            uniforms: {
+                uTex:      { value: null },
+                uCenter:   { value: new THREE.Vector2(0.5, 0.5) },   // touch point inside the square (0..1)
+                uProgress: { value: 0 },
+                uCells:    { value: 40 },                            // chunky pixels across the square
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+            fragmentShader: `
+                uniform sampler2D uTex;
+                uniform vec2  uCenter;
+                uniform float uProgress;
+                uniform float uCells;
+                varying vec2 vUv;
+                void main() {
+                    vec4 orig = texture2D(uTex, vUv);
+                    // Snap to a chunky pixel grid
+                    vec2 q = (floor(vUv * uCells) + 0.5) / uCells;
+                    vec2 d = q - uCenter;
+                    float dist = length(d);
+                    // Ring front grows from the touch point and fades out (0.45 = square half-size)
+                    float r    = uProgress * 0.46;
+                    float band = 0.075 + 0.05 * uProgress;
+                    // Sharp front, longer wake behind it
+                    float s    = dist < r ? band * 2.4 : band;
+                    float ring = exp(-pow((dist - r) / s, 2.0));
+                    ring *= 1.0 - uProgress * uProgress;
+                    if (ring < 0.03) discard;
+                    // Push pixels outward along the ring, in whole-cell steps
+                    vec2 dir  = d / max(dist, 1e-4);
+                    vec2 src  = q - dir * floor(ring * 5.0 + 0.5) / uCells;
+                    vec3 col  = texture2D(uTex, src).rgb;
+                    // Retro palette: few levels per channel, plus a brighter crest on the front
+                    col = floor(col * 5.0 + 0.5) / 5.0;
+                    col += step(0.8, ring) * 0.12;
+                    gl_FragColor = vec4(mix(orig.rgb, col, smoothstep(0.03, 0.3, ring)), 1.0);
+                }`,
+        });
+        this._scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this._mat));
+    }
+
+    /** x, y in CSS pixels (clientX / clientY). */
+    trigger(x, y) {
+        const r   = this._renderer;
+        const pr  = r.getPixelRatio();
+        const buf = r.getDrawingBufferSize(new THREE.Vector2());
+        const css = Math.min(window.innerWidth, window.innerHeight);
+        const size = Math.min(Math.round(Math.min(300, css * 0.78) * pr), buf.x, buf.y);
+
+        const cx = x * pr, cy = buf.y - y * pr;                       // buffer coords, origin bottom-left
+        const ox = Math.min(Math.max(Math.round(cx - size / 2), 0), buf.x - size);
+        const oy = Math.min(Math.max(Math.round(cy - size / 2), 0), buf.y - size);
+        this._rect = { x: ox, y: oy, size };
+
+        if (!this._tex || this._tex.image.width !== size) {
+            this._tex?.dispose();
+            this._tex = new THREE.FramebufferTexture(size, size);
+            this._tex.minFilter = THREE.NearestFilter;
+            this._tex.magFilter = THREE.NearestFilter;
+        }
+        this._mat.uniforms.uTex.value = this._tex;
+        this._mat.uniforms.uCenter.value.set((cx - ox) / size, (cy - oy) / size);
+        this._mat.uniforms.uCells.value = Math.max(8, Math.round(size / (5 * pr)));   // ~5 CSS px per chunky pixel
+        this._timer  = 0;
+        this._active = true;
+    }
+
+    update(delta) {
+        if (!this._active) return;
+        this._timer += delta;
+        if (this._timer >= DURATION_RIPPLE) this._active = false;
+        // Stepped animation (about 12 steps per second) for the pixel-art feel
+        this._mat.uniforms.uProgress.value = Math.floor(Math.min(this._timer / DURATION_RIPPLE, 1) * 9) / 9;
+    }
+
+    /** Call right after the scene has been rendered. */
+    render() {
+        if (!this._active || !this._tex) return;
+        const r  = this._renderer, pr = r.getPixelRatio(), { x, y, size } = this._rect;
+        r.copyFramebufferToTexture(this._tex, new THREE.Vector2(x, y));
+
+        const vp = r.getViewport(new THREE.Vector4());
+        const auto = r.autoClear;
+        r.autoClear = false;
+        r.setViewport(x / pr, y / pr, size / pr, size / pr);
+        r.render(this._scene, this._cam);
+        r.setViewport(vp);
+        r.autoClear = auto;
+    }
+
+    dispose() {
+        this._tex?.dispose();
+        this._mat.dispose();
+        this._scene.children[0].geometry.dispose();
+    }
+}
+
+const DURATION_RIPPLE = 0.75;   // seconds

@@ -6,8 +6,28 @@ import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
 
 import { createScene, pickSceneName }       from './scenes/registry.js';
 import { createObject, pickObjectSpec }     from './objects/registry.js';
-import { TapBurstEffect, RingPulseEffect }  from './effects.js';
+import { TapBurstEffect, RingPulseEffect, PixelRippleEffect }  from './effects.js';
 import { TouchInput }                       from './touch-input.js';
+
+// ── Adaptive quality ──────────────────────────────────────────────────────────
+// Phones are fill-rate bound, so the knob is the render resolution (pixel ratio).
+// Start from a sensible default for the device and step down if the frame rate drops.
+const PR_STEPS     = [2, 1.5, 1.25, 1, 0.85, 0.7];   // allowed pixel ratios, high → low
+const TARGET_FPS   = 42;      // below this (averaged over a window) we lower the resolution
+const FPS_WINDOW   = 1500;    // ms per measurement window
+const PR_STORE_KEY = 'robotraca.pixelRatio';
+
+const IS_MOBILE = (() => {
+    try { return matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); }
+    catch (_) { return false; }
+})();
+
+function _storedRatio() {
+    try { const v = parseFloat(localStorage.getItem(PR_STORE_KEY)); return v > 0 ? v : null; } catch (_) { return null; }
+}
+function _storeRatio(v) {
+    try { localStorage.setItem(PR_STORE_KEY, String(v)); } catch (_) {}
+}
 
 export class Visualizer {
     constructor(canvas) {
@@ -45,6 +65,11 @@ export class Visualizer {
         this._dragVelocity = { x: 0, y: 0 };
         this._isDragging   = false;
         this._idleTime     = 0;
+        this._pixelRatio   = 1;
+        this._adaptive     = true;
+        this._qTime        = 0;      // ms accumulated in the current fps window
+        this._qFrames      = 0;
+        this._qSkip        = 1;      // windows to ignore (shader compile, right after a change)
         this._isIdle       = false;   // facing the camera, untouched: idle gestures may play
         this._isPressing   = false;
 
@@ -66,8 +91,15 @@ export class Visualizer {
         this._cameraBaseZ     = songConfig.theme.cameraDistance;
 
         // Renderer
-        this._renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
-        this._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        // MSAA only on desktop: on phones it is the most expensive thing per pixel
+        this._renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: !IS_MOBILE });
+        const params   = new URLSearchParams(location.search);
+        const forcedPr = parseFloat(params.get('pr'));          // ?pr=1 fixes the resolution (testing)
+        let ratio = Math.min(window.devicePixelRatio, IS_MOBILE ? 1.5 : 2);
+        const saved = _storedRatio();                           // what this device settled on last time
+        if (saved) ratio = Math.min(ratio, saved);
+        if (forcedPr > 0) { ratio = forcedPr; this._adaptive = false; }
+        this._setPixelRatio(ratio);
         this._renderer.setSize(window.innerWidth, window.innerHeight);
         this._renderer.toneMapping         = THREE.ACESFilmicToneMapping;
         this._renderer.toneMappingExposure = 1.2;
@@ -122,6 +154,7 @@ export class Visualizer {
             burst: new TapBurstEffect(this._threeScene, songConfig.theme.primaryColor),
             pulse: new RingPulseEffect(this._threeScene, songConfig.theme.primaryColor),
         };
+        this._ripple = new PixelRippleEffect(this._renderer);
 
         // Bloom (if scene requests it)
         this._buildComposer();
@@ -172,10 +205,8 @@ export class Visualizer {
 
         ti.onPressStart = (screenX, screenY) => {
             this._isPressing = true;
-            // Sparks fire immediately on touch-down at the exact press position
-            const pos = this._screenTo3D(screenX, screenY);
-            this._effects.burst.trigger(this._theme.primaryColor, pos);
-            this._effects.pulse.trigger(this._theme.primaryColor, pos);
+            // Pixel-art distortion at the exact press position (no sparks, no ring)
+            this._ripple?.trigger(screenX, screenY);
         };
         ti.onPressEnd = () => { this._isPressing = false; };
 
@@ -237,6 +268,7 @@ export class Visualizer {
 
     _tick(ts) {
         if (!this._running) return;
+        this._watchFrameRate(ts - this._lastTime);
         const delta = Math.min((ts - this._lastTime) / 1000, 0.1); // seconds, capped
         this._lastTime = ts;
 
@@ -328,6 +360,7 @@ export class Visualizer {
         // Effects
         this._effects.burst.update(delta);
         this._effects.pulse.update(delta);
+        this._ripple?.update(delta);
 
         // Subtitles
         if (this._subtitleEngine && this.onSubtitleUpdate) {
@@ -343,9 +376,38 @@ export class Visualizer {
         } else {
             this._renderer.render(this._threeScene, this._camera);
         }
+        this._ripple?.render();
     }
 
     // ── Resize ────────────────────────────────────────────────────────────────
+
+    _setPixelRatio(r) {
+        this._pixelRatio = r;
+        this._renderer.setPixelRatio(r);
+        this._renderer.setSize(window.innerWidth, window.innerHeight);
+        this._composer?.setPixelRatio?.(r);
+        this._composer?.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // Averages the frame rate over short windows and steps the resolution down if it is low
+    _watchFrameRate(ms) {
+        if (!this._adaptive) return;
+        if (ms > 250) { this._qTime = 0; this._qFrames = 0; return; }   // tab hidden / paused: ignore
+        this._qTime += ms; this._qFrames++;
+        if (this._qTime < FPS_WINDOW) return;
+        const fps = this._qFrames * 1000 / this._qTime;
+        this._qTime = 0; this._qFrames = 0;
+        if (this._qSkip > 0) { this._qSkip--; return; }
+        if (fps >= TARGET_FPS) return;
+
+        const lower = PR_STEPS.filter(p => p < this._pixelRatio - 0.01);
+        if (!lower.length) return;
+        const next = fps < 25 && lower.length > 1 ? lower[1] : lower[0];   // very slow: skip a step
+        console.info(`[quality] ${fps.toFixed(0)} fps → pixel ratio ${this._pixelRatio} → ${next}`);
+        this._setPixelRatio(next);
+        _storeRatio(next);
+        this._qSkip = 1;
+    }
 
     _handleResize() {
         if (!this._camera || !this._renderer) return;
@@ -369,6 +431,8 @@ export class Visualizer {
         this._currentObject?.dispose();
         this._effects?.burst.dispose();
         this._effects?.pulse.dispose();
+        this._ripple?.dispose();
+        this._ripple = null;
 
         this._threeScene?.traverse(child => {
             if (child.isMesh) {
