@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { IdleAnimator } from './idle-animations.js';
+
+const HEADBANG_PITCH = 0.42;   // radians the head drops forward on each beat (~24°)
 
 export class GltfObject {
     constructor(gltf) {
@@ -6,6 +9,22 @@ export class GltfObject {
         this._model = null;
         this._theme = null;
         this._meshes = [];
+
+        // Optional rig (only models exported with these nodes, e.g. atodoquesi)
+        this._mouth = null;
+        this._mouthBase = null;
+        this._lids  = null;
+        this._open  = 0;          // smoothed mouth opening 0-1
+        this._time  = 0;
+        this._nextBlink = 2.5;
+        this._blinkLeft = 0;      // seconds of blink remaining
+        this._blinksQueued = 0;
+
+        this._idle  = new IdleAnimator();
+        this._speaking = false;
+        this._bang  = 0;          // headbang impulse, set on beat while nobody sings
+        this._bangShown = 0;
+        this._pivot = null;       // wrapper at the visual centre, used for idle gestures
     }
 
     init(parentGroup, theme) {
@@ -58,12 +77,34 @@ export class GltfObject {
             console.warn('[GltfObject] Model loaded but has no visible meshes:', this._gltf);
         }
 
+        this._mouth = model.getObjectByName('Mouth') ?? null;
+        this._lids  = model.getObjectByName('Lids') ?? null;
+        if (this._mouth) {
+            this._mouthBase = {
+                position: this._mouth.position.clone(),
+                rotation: this._mouth.rotation.clone(),
+                scale:    this._mouth.scale.clone(),
+            };
+        }
+        if (this._lids) this._lids.visible = false;
+        this._open = 0;
+        this._time = 0;
+        this._nextBlink = 2.5;
+        this._blinkLeft = 0;
+        this._blinksQueued = 0;
+
+        this._idle.reset();
+        this._pivot = new THREE.Group();
+        this._pivot.add(model);
         this._model = model;
-        parentGroup.add(model);
+        parentGroup.add(this._pivot);
     }
 
-    update(reactive /*, delta */) {
+    update(reactive, delta) {
         if (!this._model || !this._theme) return;
+        this._animateMouth(reactive, delta);
+        this._animateBlink(delta);
+        this._animateIdle(reactive, delta);
         if (this._theme.modelEmissive === false) return; // matte: no reactive glow
         const intensity = 0.3 + reactive.bassEnergy * 1.5 + reactive.highsEnergy * 1.0;
         for (const mesh of this._meshes) {
@@ -74,7 +115,66 @@ export class GltfObject {
         }
     }
 
+    // Mouth: opens/closes while there is voice (subtitle cue active), calm otherwise
+    _animateMouth(reactive, delta) {
+        const m = this._mouth;
+        if (!m || !this._mouthBase) return;
+        this._time += delta;
+        let target = 0;
+        if (reactive.speaking) {
+            const syl    = Math.abs(Math.sin(this._time * 14.6)) * (0.6 + 0.4 * Math.sin(this._time * 4.2));
+            const phrase = Math.sin(this._time * 7.8) > -0.35 ? 1 : 0.1;
+            target = Math.min(1, 0.1 + 0.6 * syl * phrase + 0.8 * reactive.midsEnergy);
+        }
+        this._open += (target - this._open) * (1 - Math.pow(0.42, delta * 60));
+        const o = this._open, b = this._mouthBase;
+        m.scale.set(b.scale.x * (1 - 0.08 * o), b.scale.y * (1 + 0.65 * o), b.scale.z);
+        m.position.set(b.position.x, b.position.y - 0.04 * o, b.position.z + 0.04 * o);
+        m.rotation.set(b.rotation.x + 0.3 * o, b.rotation.y, b.rotation.z);
+    }
+
+    // Idle gestures (nod, tilt, hop…) while facing the camera and untouched
+    _animateIdle(reactive, delta) {
+        if (!this._pivot) return;
+        this._speaking = !!reactive.speaking;
+
+        // Headbang: snap forward on the beat, rise back slowly
+        this._bang *= Math.pow(0.9, delta * 60);
+        this._bangShown += (this._bang - this._bangShown) * (1 - Math.pow(0.3, delta * 60));
+        const bang = this._bangShown;
+
+        const p = this._idle.update(!!reactive.idle, delta);
+        this._pivot.rotation.set((p?.rx ?? 0) + HEADBANG_PITCH * bang, p?.ry ?? 0, p?.rz ?? 0);
+        this._pivot.position.set(p?.px ?? 0, (p?.py ?? 0) - 0.05 * bang, p?.pz ?? 0);
+        this._pivot.scale.set(p?.sx ?? 1, p?.sy ?? 1, p?.sz ?? 1);
+    }
+
+    // Blink: black discs over the eyes for a split second, at random intervals
+    _animateBlink(delta) {
+        if (!this._lids) return;
+        if (this._blinkLeft > 0) {
+            this._blinkLeft -= delta;
+            if (this._blinkLeft <= 0) {
+                this._lids.visible = false;
+                if (this._blinksQueued > 0) {   // double blink
+                    this._blinksQueued--;
+                    this._nextBlink = 0.12;
+                } else {
+                    this._nextBlink = 2.5 + Math.random() * 3.5;
+                }
+            }
+            return;
+        }
+        this._nextBlink -= delta;
+        if (this._nextBlink <= 0) {
+            this._lids.visible = true;
+            this._blinkLeft = 0.14;
+            if (Math.random() < 0.2) this._blinksQueued = 1;
+        }
+    }
+
     onBeat() {
+        if (!this._speaking && this._pivot) this._bang = 1;
         if (this._theme?.modelEmissive === false) return;
         for (const mesh of this._meshes) {
             if (mesh.material && 'emissiveIntensity' in mesh.material) {
@@ -96,7 +196,17 @@ export class GltfObject {
         // Only detach from the parent — do NOT dispose geometries/materials here
         // because this._model is the shared gltf.scene from the asset cache.
         // Disposing it would permanently destroy the GPU resources for future plays.
+        // The gltf scene is shared through the asset cache: put the rig back as found
+        if (this._mouth && this._mouthBase) {
+            this._mouth.position.copy(this._mouthBase.position);
+            this._mouth.rotation.copy(this._mouthBase.rotation);
+            this._mouth.scale.copy(this._mouthBase.scale);
+        }
+        if (this._lids) this._lids.visible = false;
+        this._mouth = null; this._mouthBase = null; this._lids = null;
         this._model?.parent?.remove(this._model);
+        this._pivot?.parent?.remove(this._pivot);
+        this._pivot = null;
         this._model  = null;
         this._meshes = [];
     }

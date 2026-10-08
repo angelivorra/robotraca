@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VERSION } from './config.js';
 
 const _cache = new Map();
+
+// Appends ?v=<VERSION> so a new deploy never reuses a stale cached asset
+const _v = url => url + (url.includes('?') ? '&' : '?') + 'v=' + VERSION;
 
 function _gltfPaths(songConfig) {
     return (songConfig.objects || []).filter(
@@ -33,7 +37,7 @@ export async function loadSongAssets(songConfig, onProgress) {
 
     // 1. Audio
     tasks.push(
-        fetch(songConfig.audio)
+        fetch(_v(songConfig.audio))
             .then(r => { if (!r.ok) throw new Error(`Audio ${r.status}`); return r.arrayBuffer(); })
             .then(buf => { tick(); return { type: 'audio', data: buf }; })
     );
@@ -42,7 +46,7 @@ export async function loadSongAssets(songConfig, onProgress) {
     const gltfLoader = new GLTFLoader();
     for (const path of paths) {
         tasks.push(
-            gltfLoader.loadAsync(path)
+            gltfLoader.loadAsync(_v(path))
                 .then(g  => { console.log('[loader] GLTF OK:', path, g); tick(); return { type: 'gltf', path, data: g    }; })
                 .catch(e => { console.error('[loader] GLTF FAIL:', path, e); tick(); return { type: 'gltf', path, data: null }; })
         );
@@ -51,7 +55,7 @@ export async function loadSongAssets(songConfig, onProgress) {
     // 3. Subtitles (optional)
     if (songConfig.subtitles) {
         tasks.push(
-            fetch(songConfig.subtitles)
+            fetch(_v(songConfig.subtitles))
                 .then(r => r.ok ? r.text() : null)
                 .then(t => { tick(); return { type: 'subtitles', data: t }; })
                 .catch(() => { tick(); return { type: 'subtitles', data: null }; })
@@ -62,7 +66,7 @@ export async function loadSongAssets(songConfig, onProgress) {
     if (songConfig.background) {
         tasks.push(new Promise(resolve => {
             new THREE.TextureLoader().load(
-                songConfig.background,
+                _v(songConfig.background),
                 tex => { tick(); resolve({ type: 'bg', data: tex  }); },
                 undefined,
                 ()  => { tick(); resolve({ type: 'bg', data: null }); }

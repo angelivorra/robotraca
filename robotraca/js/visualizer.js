@@ -44,6 +44,8 @@ export class Visualizer {
         this._gyroActual  = { x: 0, y: 0 };
         this._dragVelocity = { x: 0, y: 0 };
         this._isDragging   = false;
+        this._idleTime     = 0;
+        this._isIdle       = false;   // facing the camera, untouched: idle gestures may play
         this._isPressing   = false;
 
         this._raycaster = new THREE.Raycaster();
@@ -269,7 +271,15 @@ export class Visualizer {
         // Scene update
         this._currentScene?.update(reactive, delta);
 
+        // Current subtitle cue (also tells the object when there is voice)
+        let cue = null;
+        if (this._subtitleEngine) {
+            cue = this._subtitleEngine.getCueAt(this._audioEngine.getCurrentTime());
+            reactive.speaking = cue != null;
+        }
+
         // Object update
+        reactive.idle = this._isIdle;
         this._currentObject?.update(reactive, delta);
 
         // Model group: auto-rotate (damped when drag just happened)
@@ -277,7 +287,26 @@ export class Visualizer {
             this._dragVelocity.x *= 0.92;
             this._dragVelocity.y *= 0.92;
             this._modelGroup.rotation.x += this._dragVelocity.x;
-            this._modelGroup.rotation.y += this._dragVelocity.y + 0.005;
+            if (this._theme.faceFront) {
+                // No constant spin: after a moment without touch, ease back to facing the camera
+                this._idleTime += delta;
+                this._modelGroup.rotation.y += this._dragVelocity.y;
+                if (this._idleTime > 1.0) {
+                    const k = 1 - Math.exp(-3 * delta);
+                    const ry = this._modelGroup.rotation.y;
+                    const target = Math.round(ry / (Math.PI * 2)) * Math.PI * 2;
+                    this._modelGroup.rotation.y += (target - ry) * k;
+                    this._modelGroup.rotation.x += (0 - this._modelGroup.rotation.x) * k;
+                }
+                this._isIdle = !this._isPressing && this._idleTime > 1.5 &&
+                    Math.abs(this._modelGroup.rotation.y - Math.round(this._modelGroup.rotation.y / (Math.PI * 2)) * Math.PI * 2) < 0.05 &&
+                    Math.abs(this._modelGroup.rotation.x) < 0.05;
+            } else {
+                this._modelGroup.rotation.y += this._dragVelocity.y + 0.005;
+            }
+        } else {
+            this._idleTime = 0;
+            this._isIdle = false;
         }
         this._isDragging = false;
 
@@ -306,8 +335,6 @@ export class Visualizer {
 
         // Subtitles
         if (this._subtitleEngine && this.onSubtitleUpdate) {
-            const t   = this._audioEngine.getCurrentTime();
-            const cue = this._subtitleEngine.getCueAt(t);
             this.onSubtitleUpdate(cue);
         }
 
