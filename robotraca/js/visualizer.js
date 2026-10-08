@@ -148,6 +148,7 @@ export class Visualizer {
         const spec = pickObjectSpec(songConfig.objects || ['icosahedron'], assets.gltfs || {});
         this._currentObject = createObject(spec, assets.gltfs || {});
         this._currentObject.init(this._modelGroup, this._theme);
+        this._currentObject.setBeatGrid?.(assets.beatGrid);
 
         // Effects
         this._effects = {
@@ -304,6 +305,7 @@ export class Visualizer {
         this._currentScene?.update(reactive, delta);
 
         // Current subtitle cue (also tells the object when there is voice)
+        reactive.time = this._audioEngine.getCurrentTime();   // seconds into the song
         let cue = null;
         if (this._subtitleEngine) {
             cue = this._subtitleEngine.getCueAt(this._audioEngine.getCurrentTime());

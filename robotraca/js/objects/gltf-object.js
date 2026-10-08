@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { IdleAnimator } from './idle-animations.js';
+import { WireSpark } from './wire-spark.js';
+import { makeSilver } from './silver-material.js';
 
 const HEADBANG_PITCH = 0.42;   // radians the head drops forward on each beat (~24°)
+
+const GRID_LEAD = 0.03;   // seconds: start the nod slightly early so it lands on the beat
 
 export class GltfObject {
     constructor(gltf) {
@@ -22,8 +26,13 @@ export class GltfObject {
 
         this._idle  = new IdleAnimator();
         this._speaking = false;
+        this._grid = null;        // beat times of the song (seconds), if analysed offline
+        this._gridIdx = 0;
+        this._lastT = 0;
+        this._beatCount = 0;
         this._bang  = 0;          // headbang impulse, set on beat while nobody sings
         this._bangShown = 0;
+        this._spark = null;       // spark running along the head wire (models with that wire)
         this._pivot = null;       // wrapper at the visual centre, used for idle gestures
     }
 
@@ -63,6 +72,15 @@ export class GltfObject {
             });
             child.material = Array.isArray(child.material) ? out : out[0];
         });
+
+        // Silver metallic faces on the head; the mouth (teeth!) keeps its own plain material
+        const headMesh = model.getObjectByName('Head'), mouthMesh = model.getObjectByName('Mouth');
+        if (headMesh?.isMesh && !headMesh.material.userData.silver) {
+            if (mouthMesh?.isMesh && mouthMesh.material === headMesh.material) {
+                mouthMesh.material = headMesh.material.clone();
+            }
+            makeSilver(headMesh.material);
+        }
 
         const emissiveEnabled = theme.modelEmissive !== false;
         const primary   = new THREE.Color(theme.primaryColor);
@@ -114,6 +132,11 @@ export class GltfObject {
         this._blinksQueued = 0;
 
         this._idle.reset();
+        this._beatCount = 0;
+        if (this._mouth) {         // the robot rig also has the wire on top of its head
+            this._spark = new WireSpark();
+            model.add(this._spark.object);
+        }
         this._pivot = new THREE.Group();
         this._pivot.add(model);
         this._model = model;
@@ -125,6 +148,7 @@ export class GltfObject {
         this._animateMouth(reactive, delta);
         this._animateBlink(delta);
         this._animateIdle(reactive, delta);
+        this._spark?.update(delta);
         if (this._theme.modelEmissive === false) return; // matte: no reactive glow
         const intensity = 0.3 + reactive.bassEnergy * 1.5 + reactive.highsEnergy * 1.0;
         for (const mesh of this._meshes) {
@@ -153,10 +177,35 @@ export class GltfObject {
         m.rotation.set(b.rotation.x + 0.3 * o, b.rotation.y, b.rotation.z);
     }
 
+    /** Beat times (seconds) found by analysing the audio offline; the headbang follows them. */
+    setBeatGrid(beats) {
+        this._grid = beats?.length ? beats : null;
+        this._gridIdx = 0;
+        this._lastT = 0;
+    }
+
+    // Headbang on the song's own beat grid (steady, always on the beat) instead of the live detector
+    _followGrid(t) {
+        const g = this._grid;
+        if (!g || t == null) return;
+        if (t < this._lastT - 0.3) {            // jumped back: find our place again
+            let lo = 0, hi = g.length;
+            while (lo < hi) { const mid = (lo + hi) >> 1; if (g[mid] - GRID_LEAD < t) lo = mid + 1; else hi = mid; }
+            this._gridIdx = lo;
+        }
+        this._lastT = t;
+        while (this._gridIdx < g.length && g[this._gridIdx] - GRID_LEAD <= t) {
+            const late = t - g[this._gridIdx];  // skip beats we missed (lag, jump forward)
+            if (late < 0.25 && !this._speaking && this._pivot) this._bang = 1;
+            this._gridIdx++;
+        }
+    }
+
     // Idle gestures (nod, tilt, hop…) while facing the camera and untouched
     _animateIdle(reactive, delta) {
         if (!this._pivot) return;
         this._speaking = !!reactive.speaking;
+        this._followGrid(reactive.time);
 
         // Headbang: snap forward on the beat, rise back slowly
         this._bang *= Math.pow(0.9, delta * 60);
@@ -194,7 +243,13 @@ export class GltfObject {
     }
 
     onBeat() {
-        if (!this._speaking && this._pivot) this._bang = 1;
+        // Headbang on every Nth beat (theme.headbangEvery, default 1); the count keeps going
+        // while someone sings so the rhythm stays steady
+        if (!this._grid) {   // no beat grid for this song: use the live detector
+            this._beatCount++;
+            const every = this._theme?.headbangEvery ?? 1;
+            if (!this._speaking && this._pivot && this._beatCount % every === 0) this._bang = 1;
+        }
         if (this._theme?.modelEmissive === false) return;
         for (const mesh of this._meshes) {
             if (mesh.material && 'emissiveIntensity' in mesh.material) {
@@ -223,6 +278,7 @@ export class GltfObject {
             this._mouth.scale.copy(this._mouthBase.scale);
         }
         if (this._lids) this._lids.visible = false;
+        this._spark?.dispose(); this._spark = null;
         this._mouth = null; this._mouthBase = null; this._lids = null;
         this._model?.parent?.remove(this._model);
         this._pivot?.parent?.remove(this._pivot);

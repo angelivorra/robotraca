@@ -28,6 +28,7 @@ export async function loadSongAssets(songConfig, onProgress) {
     let total    = 1; // audio always present
     total += paths.length;
     if (songConfig.subtitles)  total++;
+    if (songConfig.beatGrid)   total++;
     if (songConfig.background) total++;
 
     let completed = 0;
@@ -62,6 +63,16 @@ export async function loadSongAssets(songConfig, onProgress) {
         );
     }
 
+    // 3b. Beat grid for the headbang (optional): { bpm, beats: [seconds…] }
+    if (songConfig.beatGrid) {
+        tasks.push(
+            fetch(_v(songConfig.beatGrid))
+                .then(r => r.ok ? r.json() : null)
+                .then(j => { tick(); return { type: 'beats', data: j }; })
+                .catch(() => { tick(); return { type: 'beats', data: null }; })
+        );
+    }
+
     // 4. Background texture (optional)
     if (songConfig.background) {
         tasks.push(new Promise(resolve => {
@@ -87,6 +98,7 @@ export async function loadSongAssets(songConfig, onProgress) {
         gltfs,
         subtitleText: results.find(r => r.type === 'subtitles')?.data ?? null,
         bgTexture:    results.find(r => r.type === 'bg')?.data        ?? null,
+        beatGrid:     results.find(r => r.type === 'beats')?.data?.beats ?? null,
     };
 
     _cache.set(songConfig.id, assets);

@@ -1,4 +1,4 @@
-export const VERSION = '3.8';
+export const VERSION = '4.3';
 
 // Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
 // contador privado de reproducciones. Vacío = contador desactivado.
@@ -33,6 +33,7 @@ export const SONGS = [
         duration: '1:44',
         audio:     'songs/energia/audio.mp3',
         subtitles: 'songs/energia/subtitles.srt',
+        beatGrid:  'songs/energia/beats.json',   // rejilla de beats (analisis offline): el cabeceo va al compas
         coverArt:  'img/energia.png',
         background: null,
 
@@ -55,6 +56,7 @@ export const SONGS = [
         duration: '1:37',
         audio:     'songs/tontos/audio.mp3',
         subtitles: 'songs/tontos/subtitles.srt',
+        beatGrid:  'songs/tontos/beats.json',   // rejilla de beats (analisis offline): el cabeceo va al compas
         coverArt:  'img/tontos.png',
         background: null,
 
@@ -77,6 +79,7 @@ export const SONGS = [
         duration: '2:04',
         audio:     'songs/sarten/audio.mp3',
         subtitles: 'songs/sarten/subtitles.srt',
+        beatGrid:  'songs/sarten/beats.json',   // rejilla de beats (analisis offline): el cabeceo va al compas
         coverArt:  'img/sarten.png',
         background: null,
 
