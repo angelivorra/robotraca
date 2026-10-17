@@ -1,3 +1,58 @@
+// Van den Berg onset: a spike versus the recent average, with a cooldown.
+// Mutates `history` and returns the advanced index and last-hit time.
+export const SPECTRUM_BARS = 16;
+
+// Log-spaced bands from ~40 Hz up to just under Nyquist, as [start, end) bins.
+export function spectrumRanges(binCount, sampleRate, fftSize) {
+    const nyquist = sampleRate / 2;
+    const minHz = 40;
+    const maxHz = Math.min(14000, nyquist * 0.9);
+    const ranges = [];
+    for (let i = 0; i < SPECTRUM_BARS; i++) {
+        const f0 = minHz * Math.pow(maxHz / minHz, i / SPECTRUM_BARS);
+        const f1 = minHz * Math.pow(maxHz / minHz, (i + 1) / SPECTRUM_BARS);
+        let b0 = Math.floor(f0 * fftSize / sampleRate);
+        let b1 = Math.ceil(f1 * fftSize / sampleRate);
+        b0 = Math.max(1, Math.min(binCount - 1, b0));
+        b1 = Math.max(b0 + 1, Math.min(binCount, b1));
+        ranges.push([b0, b1]);
+    }
+    return ranges;
+}
+
+export function fillSpectrum(freq, ranges, out) {
+    for (let i = 0; i < ranges.length; i++) {
+        const b0 = ranges[i][0];
+        const b1 = ranges[i][1];
+        let sum = 0;
+        for (let b = b0; b < b1; b++) sum += freq[b];
+        out[i] = sum / ((b1 - b0) * 255);
+    }
+    return out;
+}
+
+export function detectOnset(instant, history, index, lastTime, now, cooldown) {
+    history[index] = instant;
+    index = (index + 1) % history.length;
+
+    let avg = 0;
+    for (let i = 0; i < history.length; i++) avg += history[i];
+    avg /= history.length;
+
+    let variance = 0;
+    for (let i = 0; i < history.length; i++) {
+        const d = history[i] - avg;
+        variance += d * d;
+    }
+    variance /= history.length;
+
+    const threshold = (-0.0000025714 * variance) + 1.5142857;
+    const cooled = lastTime === 0 || (now - lastTime) > cooldown;
+    const hit = avg > 0 && instant > threshold * avg && cooled;
+    if (hit) lastTime = now;
+    return { hit, index, lastTime };
+}
+
 export class AudioEngine {
     constructor() {
         this.context    = null;
@@ -9,11 +64,20 @@ export class AudioEngine {
         this.pauseTime  = 0;
         this.isPlaying  = false;
 
-        // Beat detection rolling buffer (~1 second at 60fps)
+        // Onset buffers (~1 second at 60fps). Kick = bass, snare = mids.
         this.energyHistory = new Float32Array(43);
         this.energyIndex   = 0;
         this.lastBeatTime  = 0;
-        this.BEAT_COOLDOWN = 200; // ms between beats
+        this.BEAT_COOLDOWN = 200; // ms between kicks
+        this.snareHistory  = new Float32Array(43);
+        this.snareIndex    = 0;
+        this.lastSnareTime = 0;
+        this.SNARE_COOLDOWN = 160;
+
+        this.spectrum  = new Float32Array(SPECTRUM_BARS);
+        this.waveform  = new Uint8Array(64);
+        this._ranges   = null;
+        this._timeData = null;
 
         this._silentEl  = null;   // keeps Web Audio on the media channel (iOS silent-switch fix)
     }
@@ -23,7 +87,9 @@ export class AudioEngine {
         this.context = new (window.AudioContext || window.webkitAudioContext)();
         this.analyser = this.context.createAnalyser();
         this.analyser.fftSize               = 2048;
-        this.analyser.smoothingTimeConstant = 0.8;
+        // Low enough that a kick/snare transient survives into getBeatData.
+        // The slow body envelope is rebuilt afterwards in audio-reactive.js.
+        this.analyser.smoothingTimeConstant = 0.45;
         this.analyser.minDecibels           = -90;
         this.analyser.maxDecibels           = -10;
         this.analyser.connect(this.context.destination);
@@ -111,34 +177,27 @@ export class AudioEngine {
     getBeatData() {
         const freq = this.frequencyData;
 
-        // Bass energy: bins 3–10 (≈43–215 Hz)
+        const now = performance.now();
+
+        // Kick: bins 3–10 (≈43–215 Hz)
         let bassSum = 0;
         for (let i = 3; i <= 10; i++) bassSum += freq[i] * freq[i];
-        const instantEnergy = bassSum / 8;
+        const kick = detectOnset(
+            bassSum / 8, this.energyHistory, this.energyIndex,
+            this.lastBeatTime, now, this.BEAT_COOLDOWN
+        );
+        this.energyIndex  = kick.index;
+        this.lastBeatTime = kick.lastTime;
 
-        // Update rolling buffer
-        this.energyHistory[this.energyIndex] = instantEnergy;
-        this.energyIndex = (this.energyIndex + 1) % this.energyHistory.length;
-
-        let avgEnergy = 0;
-        for (let i = 0; i < this.energyHistory.length; i++) avgEnergy += this.energyHistory[i];
-        avgEnergy /= this.energyHistory.length;
-
-        let variance = 0;
-        for (let i = 0; i < this.energyHistory.length; i++) {
-            const d = this.energyHistory[i] - avgEnergy;
-            variance += d * d;
-        }
-        variance /= this.energyHistory.length;
-
-        // Dynamic threshold (van den Berg beat detection)
-        const threshold = (-0.0000025714 * variance) + 1.5142857;
-        const now = performance.now();
-        const isBeat = avgEnergy > 0 &&
-                       instantEnergy > threshold * avgEnergy &&
-                       (now - this.lastBeatTime) > this.BEAT_COOLDOWN;
-
-        if (isBeat) this.lastBeatTime = now;
+        // Snare crack: bins 41–120 (≈880–2580 Hz)
+        let snareSum = 0;
+        for (let i = 41; i <= 120; i++) snareSum += freq[i] * freq[i];
+        const snare = detectOnset(
+            snareSum / 80, this.snareHistory, this.snareIndex,
+            this.lastSnareTime, now, this.SNARE_COOLDOWN
+        );
+        this.snareIndex    = snare.index;
+        this.lastSnareTime = snare.lastTime;
 
         // Normalized band energies (0–1)
         let bassEnergy = 0, midsEnergy = 0, highsEnergy = 0;
@@ -150,7 +209,34 @@ export class AudioEngine {
         midsEnergy  /= (80  * 255);
         highsEnergy /= (300 * 255);
 
-        return { bass: bassEnergy, mids: midsEnergy, highs: highsEnergy, isBeat };
+        // Same-frame kick wins when the sub is louder, so a clicky kick
+        // is not also counted as a snare.
+        const isKick  = kick.hit;
+        const isSnare = snare.hit && !(isKick && bassEnergy >= midsEnergy);
+
+        if (!this._ranges) {
+            const rate = this.context?.sampleRate || 44100;
+            const fft = this.analyser?.fftSize || 2048;
+            this._ranges = spectrumRanges(freq.length, rate, fft);
+        }
+        fillSpectrum(freq, this._ranges, this.spectrum);
+        if (this.analyser) {
+            if (!this._timeData || this._timeData.length !== this.analyser.fftSize) {
+                this._timeData = new Uint8Array(this.analyser.fftSize);
+            }
+            this.analyser.getByteTimeDomainData(this._timeData);
+            const step = this._timeData.length / this.waveform.length;
+            for (let i = 0; i < this.waveform.length; i++) {
+                this.waveform[i] = this._timeData[(i * step) | 0];
+            }
+        }
+
+        return {
+            bass: bassEnergy, mids: midsEnergy, highs: highsEnergy,
+            isBeat: isKick, isKick, isSnare,
+            spectrum: this.spectrum,
+            waveform: this.waveform,
+        };
     }
 
     dispose() {

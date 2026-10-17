@@ -50,31 +50,40 @@ export class MegacityScene {
         this._speedBoost *= Math.pow(0.95, delta * 60);
 
         const bass  = reactive.bassEnergy;
+        const highs = reactive.highsAttack || 0;
+        const mids  = reactive.midsAttack || 0;
         const speed = (5 + bass * 14 + this._speedBoost * 16) * delta;
 
         for (const row of this._rows) {
             row.group.position.z += speed;
             if (row.group.position.z > WRAP_Z) row.group.position.z -= TOTAL_Z;
             for (const t of row.towers) {
-                t.mat.color.setScalar(0.8 + bass * 0.5 + this._beatFlash * 0.5 * t.beatW);
-                if (t.beacon) t.beacon.visible = Math.sin(this._time * 2.2 + t.phase) > 0.2;
+                t.mat.color.setScalar(0.75 + bass * 0.35 + this._beatFlash * 0.45 * t.beatW);
+                if (t.beacon) {
+                    const blink = Math.sin(this._time * (2.2 + highs * 8) + t.phase);
+                    t.beacon.visible = this._beatFlash > 0.45 || blink > 0.2 - highs * 0.45;
+                }
                 if (t.board) {
-                    const flick = Math.sin(this._time * t.board.rate + t.phase) > 0.92 ? 0.3 : 1;
-                    t.board.mat.color.setScalar((0.8 + reactive.midsEnergy * 0.8 + this._beatFlash * 0.5) * flick);
+                    let flick = Math.sin(this._time * t.board.rate + t.phase) > 0.92 ? 0.3 : 1;
+                    if (highs > 0.2 && Math.sin(this._time * (10 + t.phase) + t.phase * 3) > 1 - highs) {
+                        flick = 0.28;
+                    }
+                    t.board.mat.color.setScalar((0.75 + mids * 0.9 + this._beatFlash * 0.35) * flick);
                 }
             }
         }
 
         for (const car of this._cars) {
-            car.mesh.position.z += speed - car.v * delta;
+            car.mesh.position.z += speed - car.v * (1 + highs * 1.6) * delta;
+            car.mesh.material.opacity = 0.4 + highs * 0.55 + this._beatFlash * 0.15;
             if (car.mesh.position.z > 8)    this._respawnCar(car, -95);
             if (car.mesh.position.z < -100) this._respawnCar(car, 8);
         }
 
-        const sweep = this._time * 0.35;
+        const sweep = this._time * (0.35 + highs * 0.8);
         this._beams.forEach((b, i) => {
             b.rotation.z = Math.sin(sweep + i * 2.1) * 0.55 + (i ? 0.15 : -0.15);
-            b.material.opacity = 0.18 + reactive.highsEnergy * 0.25 + this._beatFlash * 0.15;
+            b.material.opacity = 0.12 + highs * 0.5 + this._beatFlash * 0.12;
         });
     }
 
@@ -295,7 +304,7 @@ function _drawWindows(c, w, h, density, rand) {
 }
 
 function _boardTexture(color, idx) {
-    const words = ['電脳', 'NEON', 'ロボ', '2049', '夜市'];
+    const words = ['電脳', 'GANDUL', 'ロボ', '2049', '夜市'];
     return _canvasTex(128, 192, (c, w, h) => {
         c.fillStyle = 'rgba(6,0,18,0.88)'; c.fillRect(0, 0, w, h);
         const g = c.createLinearGradient(0, 0, 0, h);

@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 
 // Retro CRT monitor wall: a grid of beige-framed monitors behind and around the
-// central model. A handful of animated canvas textures (static, SMPTE bars,
-// oscilloscope, pixel faces, terminal text, equalizer, radar, no-signal) are
-// shared by all screens and redrawn ~8 times per second with scanlines and
-// vignette. On every beat random screens glitch (texture swap, jitter, flash).
+// central model. Most textures redraw ~8 times per second. The equalizer and
+// the oscilloscope redraw every frame from the song's spectrum and waveform.
+// A kick swaps two or three screens; a snare swaps two more. No sliced bands.
 // Dark floor, hanging cables and a faint glow. All procedural.
 const COLS      = 7;
 const ROWS      = 5;
@@ -22,6 +21,8 @@ const FLOOR_Y   = -3.6;
 const PHOSPHOR = '#3dff7a';
 const MAGENTA  = '#ff2a9d';
 const CYAN     = '#27f5ff';
+const TEX_SCOPE = 2;
+const TEX_EQ    = 5;
 
 export class CrtWallScene {
     get useBloom() { return false; }
@@ -37,6 +38,8 @@ export class CrtWallScene {
         this._time = 0;
         this._acc = 0;
         this._bass = 0;
+        this._bands = null;
+        this._wave = null;
         this._primary = new THREE.Color();
         this._secondary = new THREE.Color();
         this._tint = new THREE.Color();
@@ -65,10 +68,16 @@ export class CrtWallScene {
         const bass = reactive.bassEnergy;
         this._bass = bass;
 
+        this._bands = reactive.spectrum || null;
+        this._wave = reactive.waveform || null;
+        if (reactive.isSnare) this._glitchSome(2);
+
+        // Live meters every frame. The other channels stay on the slow clock.
+        this._redrawSome([TEX_SCOPE, TEX_EQ], this._time);
         this._acc += delta;
         if (this._acc >= REDRAW) {
             this._acc = 0;
-            this._redraw(this._time);
+            this._redrawSome([0, 1, 3, 4, 6, 7], this._time);
         }
 
         for (const s of this._screens) {
@@ -126,31 +135,26 @@ export class CrtWallScene {
     }
 
     _redraw(t) {
-        const gl = this._glitchLevel;
-        for (let i = 0; i < this._texs.length; i++) {
-            const { canvas, ctx, fn } = this._texs[i].userData;
-            fn(ctx, TEX_W, TEX_H, t, i);
-            // glitch strips: horizontal displacement of random bands right after a beat
-            if (this._beatFlash > 0.15) {
-                const n = 2 + ((this._beatFlash * 4 * gl) | 0);
-                for (let k = 0; k < n; k++) {
-                    const y = (Math.random() * TEX_H) | 0;
-                    const h = 3 + ((Math.random() * 12) | 0);
-                    const dx = ((Math.random() - 0.5) * 40 * this._beatFlash * gl) | 0;
-                    ctx.drawImage(canvas, 0, y, TEX_W, h, dx, y, TEX_W, h);
-                }
-            }
-            // scanlines
-            ctx.fillStyle = 'rgba(0,0,0,0.28)';
-            for (let y = 0; y < TEX_H; y += 2) ctx.fillRect(0, y, TEX_W, 1);
-            // vignette
-            const v = ctx.createRadialGradient(TEX_W / 2, TEX_H / 2, TEX_H * 0.35, TEX_W / 2, TEX_H / 2, TEX_W * 0.72);
-            v.addColorStop(0, 'rgba(0,0,0,0)');
-            v.addColorStop(1, 'rgba(0,0,0,0.65)');
-            ctx.fillStyle = v;
-            ctx.fillRect(0, 0, TEX_W, TEX_H);
-            this._texs[i].needsUpdate = true;
-        }
+        const ids = [];
+        for (let i = 0; i < this._texs.length; i++) ids.push(i);
+        this._redrawSome(ids, t);
+    }
+
+    _redrawSome(indices, t) {
+        for (let n = 0; n < indices.length; n++) this._paintTex(indices[n], t);
+    }
+
+    _paintTex(i, t) {
+        const { ctx, fn } = this._texs[i].userData;
+        fn(ctx, TEX_W, TEX_H, t, i);
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        for (let y = 0; y < TEX_H; y += 2) ctx.fillRect(0, y, TEX_W, 1);
+        const v = ctx.createRadialGradient(TEX_W / 2, TEX_H / 2, TEX_H * 0.35, TEX_W / 2, TEX_H / 2, TEX_W * 0.72);
+        v.addColorStop(0, 'rgba(0,0,0,0)');
+        v.addColorStop(1, 'rgba(0,0,0,0.65)');
+        ctx.fillStyle = v;
+        ctx.fillRect(0, 0, TEX_W, TEX_H);
+        this._texs[i].needsUpdate = true;
     }
 
     _drawStatic(c, w, h) {
@@ -178,12 +182,22 @@ export class CrtWallScene {
         c.strokeStyle = '#0c4a24'; c.lineWidth = 1;
         for (let x = 0; x <= w; x += 16) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
         for (let y = 0; y <= h; y += 16) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
-        const amp = 14 + this._bass * 24 + this._beatFlash * 10;
         c.strokeStyle = PHOSPHOR; c.lineWidth = 2;
         c.beginPath();
-        for (let x = 0; x <= w; x += 2) {
-            const y = h / 2 + Math.sin(x * 0.12 + t * 6) * amp * 0.7 + Math.sin(x * 0.31 - t * 9) * amp * 0.3;
-            if (x === 0) c.moveTo(x, y); else c.lineTo(x, y);
+        const wave = this._wave;
+        if (wave && wave.length > 1) {
+            const n = wave.length;
+            for (let i = 0; i < n; i++) {
+                const x = (i / (n - 1)) * w;
+                const y = h / 2 + ((wave[i] - 128) / 128) * (h * 0.42);
+                if (i === 0) c.moveTo(x, y); else c.lineTo(x, y);
+            }
+        } else {
+            const amp = 14 + this._bass * 24 + this._beatFlash * 10;
+            for (let x = 0; x <= w; x += 2) {
+                const y = h / 2 + Math.sin(x * 0.12 + t * 6) * amp * 0.7 + Math.sin(x * 0.31 - t * 9) * amp * 0.3;
+                if (x === 0) c.moveTo(x, y); else c.lineTo(x, y);
+            }
         }
         c.stroke();
     }
@@ -229,9 +243,13 @@ export class CrtWallScene {
         const g = c.createLinearGradient(0, 0, 0, h);
         g.addColorStop(0, '#1a0030'); g.addColorStop(1, '#05000c');
         c.fillStyle = g; c.fillRect(0, 0, w, h);
-        const n = 12, bw = w / n;
+        const bands = this._bands;
+        const n = bands && bands.length ? bands.length : 12;
+        const bw = w / n;
         for (let i = 0; i < n; i++) {
-            const v = 0.2 + 0.5 * Math.abs(Math.sin(t * 3 + i * 0.7)) + this._bass * 0.4;
+            const v = bands && bands.length
+                ? 0.06 + bands[i] * 0.94
+                : 0.2 + 0.5 * Math.abs(Math.sin(t * 3 + i * 0.7)) + this._bass * 0.4;
             const bh = Math.min(0.95, v) * (h - 8);
             c.fillStyle = i % 2 ? MAGENTA : CYAN;
             c.fillRect(i * bw + 2, h - bh - 2, bw - 4, bh);
@@ -292,7 +310,10 @@ export class CrtWallScene {
                 frame.position.z = -0.28;
                 group.add(frame);
 
-                const texIdx = (i * 3 + j * 5 + ((this._rand() * 4) | 0)) % this._texs.length;
+                let texIdx = (i * 3 + j * 5 + ((this._rand() * 4) | 0)) % this._texs.length;
+                // Side monitors at robot height: waveform on the left, spectrum on the right.
+                if (i === 0 && j === 2) texIdx = TEX_SCOPE;
+                if (i === COLS - 1 && (j === 1 || j === 2 || j === 3)) texIdx = TEX_EQ;
                 const mat = new THREE.MeshBasicMaterial({ map: this._texs[texIdx], toneMapped: false });
                 const glass = new THREE.Mesh(glassGeo, mat);
                 glass.position.z = 0.005;
@@ -386,13 +407,20 @@ export class CrtWallScene {
 
     // -- Interaction -------------------------------------------------------
 
+    _glitchSome(count) {
+        const n = this._screens.length;
+        if (!n) return;
+        const want = Math.max(1, Math.round(count * this._glitchLevel));
+        for (let k = 0; k < want; k++) {
+            const s = this._screens[(Math.random() * n) | 0];
+            s.glitch = 1;
+            s.glitching = true;
+        }
+    }
+
     onBeat() {
         this._beatFlash = 1.0;
-        for (const s of this._screens) {
-            if (this._rand() < 0.28 * this._glitchLevel || Math.random() < 0.28 * this._glitchLevel) {
-                s.glitch = 1; s.glitching = true;
-            }
-        }
+        this._glitchSome(3);
     }
 
     onTap() {

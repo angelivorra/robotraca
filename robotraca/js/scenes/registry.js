@@ -6,14 +6,14 @@ import { ApocalypseScene }  from './apocalypse.js';
 import { JungleScene }      from './jungle.js';
 import { OutrunScene }      from './outrun.js';
 import { NeonScene }        from './neon.js';
-import { MegacityScene }    from './megacity.js';
+import { MegacityScene }    from './megacity.js?v=gandul';
 import { SynthGridScene }   from './synthgrid.js';
 import { MatrixScene }      from './matrix.js';
 import { ClubScene } from './club.js';
 import { CubesScene } from './cubes.js';
 import { RingsScene } from './rings.js';
-import { CrtWallScene } from './crtwall.js';
-import { CircuitScene } from './circuit.js';
+import { CrtWallScene } from './crtwall.js?v=spec';
+import { CircuitScene } from './circuit.js?v=react';
 import { WarpScene } from './warp.js';
 import { VaporwaveScene } from './vaporwave.js';
 

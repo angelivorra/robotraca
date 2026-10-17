@@ -29,6 +29,8 @@ export class CircuitScene {
         this._time = 0;
         this._primary = new THREE.Color();
         this._secondary = new THREE.Color();
+        this._lanes = [];
+        this._pulseOn = null;
     }
 
     init(threeScene, theme) {
@@ -54,10 +56,11 @@ export class CircuitScene {
 
         const bass  = reactive.bassEnergy;
         const speed = (6 + bass * 14 + this._speedBoost * 16) * delta;
+        const mid = _midLevel(reactive);
 
-        // Floor
+        // Floor traces follow the mids, like a single-band EQ.
         this._grid.tex.offset.y += speed / TILE;
-        this._grid.mat.color.setScalar(0.8 + bass * 0.6 + this._beatFlash * 0.6);
+        this._grid.mat.color.setScalar(0.62 + mid * 1.05 + this._beatFlash * 0.2);
 
         // Components wrap around
         for (const it of this._items) {
@@ -73,18 +76,27 @@ export class CircuitScene {
             m.color.copy(m.userData.base).multiplyScalar(k);
         }
 
-        // Data pulses travel faster than the floor along their lane
+        // Pulses only ride out in bursts. A kick sends a pack, a snare a shorter one.
+        if (reactive.isKick) this._spawnBurst(8);
+        if (reactive.isSnare) this._spawnBurst(3);
         const p = this._pulses;
         const pos = p.geo.attributes.position;
-        const adv = speed * 2.2 + delta * 6;
+        const adv = speed * 2.4 + delta * 10;
+        let alive = 0;
         for (let i = 0; i < PULSES; i++) {
+            if (!this._pulseOn[i]) continue;
+            alive++;
             let z = pos.getZ(i) + adv;
-            if (z > NEAR_Z) z -= SPAN;
+            if (z > NEAR_Z) {
+                this._pulseOn[i] = 0;
+                pos.setY(i, -40);
+                continue;
+            }
             pos.setZ(i, z);
         }
         pos.needsUpdate = true;
-        p.mat.size = 0.55 + bass * 0.4 + this._beatFlash * 0.45;
-        p.mat.opacity = 0.8 + this._beatFlash * 0.2;
+        p.mat.size = 0.5 + this._beatFlash * 0.35;
+        p.mat.opacity = alive ? 0.9 : 0;
 
         this._horizon.material.opacity = 0.75 + bass * 0.25 + this._beatFlash * 0.2;
         for (const e of this._edgeMats) {
@@ -298,10 +310,12 @@ export class CircuitScene {
         for (let n = 0; n < FLOOR_W / TILE; n++) {
             for (const f of LANES) lanesWorld.push(-FLOOR_W / 2 + (n + f) * TILE);
         }
+        this._lanes = lanesWorld;
+        this._pulseOn = new Uint8Array(PULSES);
         for (let i = 0; i < PULSES; i++) {
             pos[i * 3]     = lanesWorld[(rng() * lanesWorld.length) | 0];
-            pos[i * 3 + 1] = FLOOR_Y + 0.12;
-            pos[i * 3 + 2] = FAR_Z + rng() * SPAN;
+            pos[i * 3 + 1] = -40;
+            pos[i * 3 + 2] = FAR_Z;
         }
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -324,6 +338,20 @@ export class CircuitScene {
         this._disposables.push(geo, tex, mat);
     }
 
+    _spawnBurst(count) {
+        const pos = this._pulses.geo.attributes.position;
+        const lanes = this._lanes;
+        let left = count;
+        for (let i = 0; i < PULSES && left > 0; i++) {
+            if (this._pulseOn[i]) continue;
+            this._pulseOn[i] = 1;
+            pos.setX(i, lanes[(Math.random() * lanes.length) | 0]);
+            pos.setY(i, FLOOR_Y + 0.12);
+            pos.setZ(i, FAR_Z + (count - left) * 1.6);
+            left--;
+        }
+    }
+
     onBeat() { this._beatFlash = 1.0; }
     onTap()  { this._beatFlash = 1.5; }
     onSwipe(dir) {
@@ -341,6 +369,17 @@ export class CircuitScene {
         this._disposables = [];
         this._grid = this._pulses = this._horizon = null;
     }
+}
+
+function _midLevel(reactive) {
+    const spec = reactive.spectrum;
+    let sum = 0;
+    let n = 0;
+    if (spec) {
+        for (let i = 3; i <= 9 && i < spec.length; i++) { sum += spec[i]; n++; }
+    }
+    const fromBars = n ? sum / n : 0;
+    return Math.max(reactive.midsAttack || 0, fromBars);
 }
 
 function _rng(seed) {

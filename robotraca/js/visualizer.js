@@ -4,10 +4,11 @@ import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
 
-import { createScene, pickSceneName }       from './scenes/registry.js';
+import { createScene, pickSceneName }       from './scenes/registry.js?v=gandul';
 import { createObject, pickObjectSpec }     from './objects/registry.js';
 import { TapBurstEffect, RingPulseEffect, PixelRippleEffect }  from './effects.js';
 import { TouchInput }                       from './touch-input.js';
+import { cyberSplitPx }                     from './audio-reactive.js';
 
 // ── Adaptive quality ──────────────────────────────────────────────────────────
 // Phones are fill-rate bound, so the knob is the render resolution (pixel ratio).
@@ -60,6 +61,15 @@ export class Visualizer {
         this._theme       = null;
         this._cameraBaseZ = 5;
         this._beatPush    = 0;
+        this._kickFlash   = 0;
+        this._snareFlash  = 0;
+        this._hitRoot     = null;
+        this._hitKick     = null;
+        this._magenta     = new THREE.Color(0xff2a9d);
+        this._cyan        = new THREE.Color(0x27f5ff);
+        this._primary     = new THREE.Color();
+        this._secondary   = new THREE.Color();
+        this._c2          = new THREE.Color();
         this._gyroTarget  = { x: 0, y: 0 };
         this._gyroActual  = { x: 0, y: 0 };
         this._dragVelocity = { x: 0, y: 0 };
@@ -121,10 +131,13 @@ export class Visualizer {
         this._threeScene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
         // Two colored point lights from the sides
-        const l1 = new THREE.PointLight(new THREE.Color(songConfig.theme.primaryColor),   3, 15);
+        this._primary.set(songConfig.theme.primaryColor);
+        this._secondary.set(songConfig.theme.secondaryColor);
+
+        const l1 = new THREE.PointLight(this._primary, 3, 15);
         l1.position.set(-3, 3, 3);
         this._threeScene.add(l1);
-        const l2 = new THREE.PointLight(new THREE.Color(songConfig.theme.secondaryColor), 2, 15);
+        const l2 = new THREE.PointLight(this._secondary, 2, 15);
         l2.position.set(3, -2, 4);
         this._threeScene.add(l2);
 
@@ -159,6 +172,8 @@ export class Visualizer {
 
         // Bloom (if scene requests it)
         this._buildComposer();
+
+        this._mountHitOverlay();
 
         // Touch input
         this._touchInput = new TouchInput(this.canvas);
@@ -278,28 +293,35 @@ export class Visualizer {
         const beatData = this._audioEngine.getBeatData();
         const reactive = this._computeReactive(beatData);
 
-        // Beat callbacks
-        if (beatData.isBeat) {
+        // Kick pushes the camera and the magenta edge. Snare only tints the side light.
+        // Scene onBeat stays on the kick so existing backgrounds don't double-fire.
+        if (beatData.isKick) {
             this._currentScene?.onBeat?.();
             this._currentObject?.onBeat?.();
             this._beatPush = 0.35;
+            this._kickFlash = 1;
             this.onBeat?.();
         }
+        if (beatData.isSnare) this._snareFlash = 1;
 
-        // Lights react to music ONLY while the screen is pressed — calm otherwise
-        if (this._isPressing) {
-            this._light1.intensity    = 2.0 + reactive.bassEnergy * 5;
-            const c2 = new THREE.Color(this._theme.secondaryColor);
-            c2.lerp(new THREE.Color(this._theme.primaryColor), reactive.midsEnergy * 0.6);
-            this._light2.color.copy(c2);
-            this._light2.intensity    = 1.5 + reactive.midsEnergy * 4;
-            this._fillLight.intensity = 0.8 + reactive.highsEnergy * 2;
-        } else {
-            this._light1.intensity    = 2.0;
-            this._light2.color.set(this._theme.secondaryColor);
-            this._light2.intensity    = 1.5;
-            this._fillLight.intensity = 0.8;
-        }
+        // Lights always follow the fast attack. A press just turns the same
+        // pulse up; watching the song still breathes.
+        const punch = this._isPressing ? 1 : 0.32;
+        const bass  = reactive.bassAttack;
+        const mids  = reactive.midsAttack;
+        const highs = reactive.highsAttack;
+
+        this._light1.color.copy(this._primary).lerp(this._magenta, this._kickFlash);
+        this._light1.intensity = 2.0 + bass * 5 * punch + this._kickFlash * 3;
+
+        this._c2.copy(this._secondary).lerp(this._primary, mids * 0.6 * punch);
+        this._c2.lerp(this._cyan, this._snareFlash);
+        this._light2.color.copy(this._c2);
+        this._light2.intensity = 1.5 + mids * 4 * punch + this._snareFlash * 2.5;
+        this._fillLight.intensity = 0.8 + highs * 2 * punch;
+
+        this._splitHighs = highs;
+        this._paintHitOverlay();
 
         // Scene update
         this._currentScene?.update(reactive, delta);
@@ -369,7 +391,76 @@ export class Visualizer {
             this.onSubtitleUpdate(cue);
         }
 
+        this._kickFlash  *= Math.pow(0.8, delta * 60);
+        this._snareFlash *= Math.pow(0.72, delta * 60);
+        if (this._kickFlash < 0.02) this._kickFlash = 0;
+        if (this._snareFlash < 0.02) this._snareFlash = 0;
+
         this._renderFrame();
+    }
+
+    _mountHitOverlay() {
+        const parent = this.canvas.parentElement;
+        if (!parent || this._hitRoot) return;
+        if (!document.getElementById('robotraca-hit-style')) {
+            const style = document.createElement('style');
+            style.id = 'robotraca-hit-style';
+            style.textContent = `
+.hit-fx{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.hit-fx__kick{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 52%,rgba(255,42,157,.95) 100%);opacity:0}
+.hit-fx__scan{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,rgba(190,255,255,.34) 0 1px,rgba(0,0,0,.42) 1px 2px,transparent 2px 4px);opacity:.9}
+`;
+            document.head.appendChild(style);
+        }
+        const el = document.createElement('div');
+        el.className = 'hit-fx';
+        el.innerHTML = `
+<svg class="hit-fx__svg" xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute">
+  <filter id="robotraca-rgb" x="-8%" y="-2%" width="116%" height="104%" color-interpolation-filters="sRGB">
+    <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
+    <feOffset in="red" dx="0" dy="0" result="redShift"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="cyan"/>
+    <feOffset in="cyan" dx="0" dy="0" result="cyanShift"/>
+    <feBlend in="redShift" in2="cyanShift" mode="screen"/>
+  </filter>
+</svg>
+<div class="hit-fx__scan"></div>
+<div class="hit-fx__kick"></div>`;
+        parent.appendChild(el);
+        this._hitRoot = el;
+        this._hitKick = el.querySelector('.hit-fx__kick');
+        this._hitScan = el.querySelector('.hit-fx__scan');
+        this._offRed  = el.querySelector('feOffset[in="red"]');
+        this._offCyan = el.querySelector('feOffset[in="cyan"]');
+        this._splitPx = 0;
+    }
+
+    _paintHitOverlay() {
+        if (!this._hitKick) return;
+        this._hitKick.style.opacity = String(this._kickFlash * 0.55);
+        if (this.canvas.style.transform) this.canvas.style.transform = '';
+        if (this._hitScan) {
+            this._hitScan.style.opacity = this._kickFlash > 0
+                ? String(0.9 + this._kickFlash * 0.1)
+                : '';
+        }
+        this._applySplit(cyberSplitPx(this._splitHighs, this._kickFlash, this._snareFlash));
+    }
+
+    _applySplit(px) {
+        if (!this.canvas || !this._offRed) return;
+        if (px === this._splitPx) return;
+        this._splitPx = px;
+        if (px === 0) {
+            this.canvas.style.filter = '';
+            return;
+        }
+        const n = px.toFixed(2);
+        this._offRed.setAttribute('dx', String(-n));
+        this._offCyan.setAttribute('dx', n);
+        if (this.canvas.style.filter !== 'url(#robotraca-rgb)') {
+            this.canvas.style.filter = 'url(#robotraca-rgb)';
+        }
     }
 
     _renderFrame() {
@@ -427,6 +518,14 @@ export class Visualizer {
     dispose() {
         this.stop();
         window.removeEventListener('resize', this._onResize);
+
+        this._hitRoot?.remove();
+        this._hitRoot = this._hitKick = this._hitScan = null;
+        this._offRed = this._offCyan = null;
+        if (this.canvas) {
+            this.canvas.style.transform = '';
+            this.canvas.style.filter = '';
+        }
 
         this._touchInput?.dispose();
         this._currentScene?.dispose();
