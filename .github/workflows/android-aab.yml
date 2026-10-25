@@ -38,13 +38,11 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Instalar Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar build-tools y platform (y aceptar licencias)
+      - name: Instalar build-tools y platform (SDK preinstalado del runner)
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "build-tools;36.1.0" "platforms;android-36" "platform-tools"
+          SDKMGR="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMGR" --licenses >/dev/null 2>&1 || true
+          "$SDKMGR" "build-tools;36.1.0" "platforms;android-36" "platform-tools"
 
       - name: Instalar Bubblewrap
         run: npm install -g @bubblewrap/cli
