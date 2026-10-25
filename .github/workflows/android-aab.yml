@@ -7,6 +7,8 @@ name: Build Android AAB (TWA)
 # Requiere estos secrets en el repo (Settings -> Secrets and variables -> Actions):
 #   ANDROID_KEYSTORE_BASE64    -> base64 del twa/robotraca-upload.keystore
 #   ANDROID_KEYSTORE_PASSWORD  -> password del keystore (store y key)
+#   PLAY_SERVICE_ACCOUNT_JSON  -> JSON del service account con permiso en Play Console
+#                                 (solo necesario para la subida automatica a Google Play)
 
 on:
   workflow_dispatch:
@@ -101,7 +103,17 @@ jobs:
           path: twa/*.aab
           if-no-files-found: error
 
-      - name: Crear Release (solo en tags)
+      - name: Subir a Google Play - Internal testing (solo en tags)
+        if: github.ref_type == 'tag'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: io.github.angelivorra.robotraca
+          releaseFiles: twa/*.aab
+          track: internal
+          status: completed
+
+      - name: Crear Release en GitHub (solo en tags)
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
