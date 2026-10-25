@@ -49,6 +49,13 @@ jobs:
 
       - name: Configurar Bubblewrap para usar el JDK/SDK del runner
         run: |
+          # Bubblewrap valida que $SDK tenga 'tools/' o 'bin/'; el runner usa
+          # cmdline-tools/latest, así que creamos el symlink que espera.
+          if [ ! -e "$ANDROID_SDK_ROOT/tools" ]; then
+            ln -s "$ANDROID_SDK_ROOT/cmdline-tools/latest" "$ANDROID_SDK_ROOT/tools" \
+              || sudo ln -s "$ANDROID_SDK_ROOT/cmdline-tools/latest" "$ANDROID_SDK_ROOT/tools"
+          fi
+          test -x "$ANDROID_SDK_ROOT/tools/bin/sdkmanager" && echo "sdkmanager OK en tools/bin"
           mkdir -p "$HOME/.bubblewrap"
           printf '{"jdkPath":"%s","androidSdkPath":"%s"}' "$JAVA_HOME" "$ANDROID_SDK_ROOT" > "$HOME/.bubblewrap/config.json"
           cat "$HOME/.bubblewrap/config.json"
