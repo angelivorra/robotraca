@@ -1,0 +1,40 @@
+{
+  "packageId": "io.github.angelivorra.robotraca",
+  "host": "angelivorra.github.io",
+  "name": "ROBOTRACA // 8-BIT PLAYER",
+  "launcherName": "ROBOTRACA",
+  "display": "standalone",
+  "themeColor": "#0f0f1a",
+  "themeColorDark": "#0f0f1a",
+  "navigationColor": "#0f0f1a",
+  "navigationColorDark": "#0f0f1a",
+  "navigationDividerColor": "#0f0f1a",
+  "navigationDividerColorDark": "#0f0f1a",
+  "backgroundColor": "#0f0f1a",
+  "enableNotifications": false,
+  "startUrl": "/robotraca/robotraca/",
+  "iconUrl": "https://angelivorra.github.io/robotraca/android-chrome-512x512.png",
+  "maskableIconUrl": "https://angelivorra.github.io/robotraca/android-chrome-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://angelivorra.github.io/robotraca/robotraca/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://angelivorra.github.io/robotraca/robotraca/",
+  "minSdkVersion": 24,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "signingKey": {
+    "path": "./robotraca-upload.keystore",
+    "alias": "robotraca"
+  }
+}

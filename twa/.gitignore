@@ -1,0 +1,19 @@
+# === Secretos de firma — NUNCA commitear en repo público ===
+robotraca-upload.keystore
+*.keystore
+KEYSTORE-INFO.txt
+
+# === Artefactos de build ===
+*.aab
+*.apk
+*.idsig
+
+# === Transitorios de Gradle / Node ===
+.gradle/
+build/
+app/build/
+node_modules/
+*.bak
+
+# El proyecto Android generado (app/src, build.gradle, gradle wrapper, etc.)
+# SÍ se versiona para que GitHub Actions pueda construir sin regenerarlo.
