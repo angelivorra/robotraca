@@ -4,13 +4,13 @@
         {
             "label": "🌐 Servidor Local - Video Player",
             "type": "shell",
-            "command": "python",
+            "command": "python3",
             "args": [
                 "-m",
                 "http.server",
                 "8080",
                 "--directory",
-                "${workspaceFolder}"
+                "${workspaceFolder}/robotraca"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -20,18 +20,18 @@
             },
             "isBackground": true,
             "group": "build",
-            "detail": "Inicia servidor en http://localhost:8080/video_player/"
+            "detail": "Inicia servidor en http://localhost:8080/"
         },
         {
             "label": "🌐 Servidor Local - Puerto 3000",
             "type": "shell",
-            "command": "python",
+            "command": "python3",
             "args": [
                 "-m",
                 "http.server",
                 "3000",
                 "--directory",
-                "${workspaceFolder}"
+                "${workspaceFolder}/robotraca"
             ],
             "problemMatcher": [],
             "presentation": {
@@ -41,7 +41,7 @@
             },
             "isBackground": true,
             "group": "build",
-            "detail": "Inicia servidor en http://localhost:3000/video_player/"
+            "detail": "Inicia servidor en http://localhost:3000/"
         }
     ]
 }

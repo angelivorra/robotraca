@@ -16,6 +16,7 @@ import { CrtWallScene } from './crtwall.js?v=spec';
 import { CircuitScene } from './circuit.js?v=react';
 import { WarpScene } from './warp.js';
 import { VaporwaveScene } from './vaporwave.js';
+import { RoboFactoryScene } from './robofactory.js?v=2';
 
 const REGISTRY = {
     tunnel:     TunnelScene,
@@ -36,6 +37,7 @@ const REGISTRY = {
     circuit: CircuitScene,
     warp: WarpScene,
     vaporwave: VaporwaveScene,
+    robofactory: RoboFactoryScene,
 };
 
 export function createScene(name) {

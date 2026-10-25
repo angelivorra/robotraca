@@ -1,6 +1,6 @@
 import { SONGS, VERSION }                 from './config.js';
 import { AudioEngine }                   from './audio-engine.js';
-import { Visualizer }                    from './visualizer.js?v=gandul';
+import { Visualizer }                    from './visualizer.js?v=fabrica';
 import { SubtitleEngine }                from './subtitles.js';
 import { loadSongAssets, evictSongAssets } from './loader.js';
 import { computeReactiveData, resetSmoothing } from './audio-reactive.js';
