@@ -103,6 +103,16 @@ jobs:
           path: twa/*.aab
           if-no-files-found: error
 
+      - name: Crear Release en GitHub (solo en tags)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: twa/*.aab
+          generate_release_notes: true
+
+      # Debe ir al final: la primera subida de una app nueva se hace a mano en
+      # Play Console. Hasta entonces este paso fallara con "Package not found",
+      # pero el .aab ya quedo publicado como artifact y Release de GitHub.
       - name: Subir a Google Play - Internal testing (solo en tags)
         if: github.ref_type == 'tag'
         uses: r0adkll/upload-google-play@v1
@@ -112,10 +122,3 @@ jobs:
           releaseFiles: twa/*.aab
           track: internal
           status: completed
-
-      - name: Crear Release en GitHub (solo en tags)
-        if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: twa/*.aab
-          generate_release_notes: true
