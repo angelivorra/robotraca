@@ -182,6 +182,7 @@ async function selectSong(index) {
 
 async function togglePlay() {
     if (!audioEngine) return;
+    audioEngine.unlock();   // sync, inside the tap, before any await
     isPlaying ? pause() : await play();
 }
 

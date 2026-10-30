@@ -1,4 +1,4 @@
-export const VERSION = '4.3';
+export const VERSION = '4.4';
 
 // Código de tu cuenta de GoatCounter (el "xxx" de xxx.goatcounter.com) para el
 // contador privado de reproducciones. Vacío = contador desactivado.

@@ -94,6 +94,21 @@ export class AudioEngine {
         this.analyser.maxDecibels           = -10;
         this.analyser.connect(this.context.destination);
         this.frequencyData = new Uint8Array(this.analyser.frequencyBinCount);
+        this.unlock();
+    }
+
+    // Synchronous, gesture-safe unlock: resume the context, play a one-sample
+    // silent buffer through it and start the media-channel element.
+    unlock() {
+        if (!this.context) return;
+        try {
+            if (this.context.state !== 'running') this.context.resume().catch(() => {});
+            const src = this.context.createBufferSource();
+            src.buffer = this.context.createBuffer(1, 1, 22050);
+            src.connect(this.context.destination);
+            src.start(0);
+        } catch (_) {}
+        this._unlockMediaChannel();
     }
 
     async loadBuffer(arrayBuffer) {
@@ -102,7 +117,7 @@ export class AudioEngine {
     }
 
     async resume() {
-        if (this.context && this.context.state === 'suspended') {
+        if (this.context && this.context.state !== 'running' && this.context.state !== 'closed') {
             await this.context.resume();
         }
     }
@@ -117,8 +132,16 @@ export class AudioEngine {
         a.setAttribute('x-webkit-airplay', 'deny');
         a.loop   = true;
         a.volume = 0;
-        // Minimal valid silent WAV (0 samples, 44100 Hz mono 16-bit)
-        a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+        a.setAttribute('playsinline', '');
+        // Silent WAV, 0.1 s at 8 kHz mono 8-bit (a 0-sample file is rejected by iOS)
+        const n = 800, wav = new Uint8Array(44 + n), dv = new DataView(wav.buffer);
+        const str = (o, t) => { for (let i = 0; i < t.length; i++) wav[o + i] = t.charCodeAt(i); };
+        str(0, 'RIFF'); dv.setUint32(4, 36 + n, true); str(8, 'WAVEfmt ');
+        dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+        dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true);
+        dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+        str(36, 'data'); dv.setUint32(40, n, true); wav.fill(128, 44);
+        a.src = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
         a.play().catch(() => {});
         this._silentEl = a;
     }
