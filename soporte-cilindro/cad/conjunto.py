@@ -8,6 +8,7 @@ ALPHA = 20.0                       # inclinacion cilindro desde la vertical haci
 T = 4.0                            # chapa
 PEDAL_W = 140                      # (*) ancho pedal -> condiciona el hueco entre paneles
 PANEL_IN = 75                      # cara interior panel (y=+-75) -> hueco 150
+LEG_W = 60                          # ancho de la aleta (mas que la tapa de 52, para dejar 5.9 mm de borde a los agujeros)
 LEG_IN, LEG_OUT = 37, 41           # aleta del soporte: y 34..38
 SPACER_L = PANEL_IN - LEG_OUT      # 22
 P0 = (20, 18 + 334)                # pivote (x,z) mundo
@@ -62,7 +63,9 @@ hx0, hz0 = PL, BZ
 hx1, hz1 = 26, BZ+PH
 hl = hypot(hx1-hx0, hz1-hz0); ang = degrees(atan2(hz1-hz0, hx1-hx0))
 LIP = 14
-lip = Pos((hx0+hx1)/2, PANEL_IN+T+LIP/2, (hz0+hz1)/2) * (Rot(0,-ang,0)*Box(hl, LIP, T))
+LIP_T0, LIP_T1 = 15.4, hl-35            # la pestana empieza 10 mm sobre la base y acaba 35 mm antes de la punta (distancias a lo largo de la hipotenusa)
+_tm = (LIP_T0+LIP_T1)/2/hl
+lip = Pos(hx0+(hx1-hx0)*_tm, PANEL_IN+T+LIP/2, hz0+(hz1-hz0)*_tm) * (Rot(0,-ang,0)*Box(LIP_T1-LIP_T0, LIP, T))
 # desplazar hacia el interior del triangulo (para que no sobresalga de la hipotenusa)
 nx, nz = -(hz1-hz0)/hl, (hx1-hx0)/hl      # normal hacia fuera (arriba-derecha)
 lip = Pos(-nx*T/2, 0, -nz*T/2)*lip
@@ -89,7 +92,7 @@ parts["Panel acero"] = (pan_l+pan_r, "#8f98a3")
 
 # ----- soporte del cilindro (2 aletas con tabs), en marco LOCAL del cilindro
 def leg(s):
-    CW = C.CAP_W; zf, zr = 0.0, -C.BODY_L
+    CW = LEG_W; zf, zr = 0.0, -C.BODY_L
     y_mid = s*(LEG_IN+LEG_OUT)/2
     body = Pos(0, y_mid, (zf+T+zr-T)/2)*Box(CW, T, (zf+T)-(zr-T))
     tab_y0, tab_y1 = 12.0, LEG_OUT
@@ -98,9 +101,13 @@ def leg(s):
     rear  = Pos(0, tmid, zr-T/2)*Box(CW, tw, T)
     front -= Pos(0,0,zf+T/2)*Cylinder(17.5, 10)           # paso de la brida
     b = body+front+rear
-    for x in (-20,20):
-        b -= Pos(x, s*20, zf+T/2)*Cylinder(3.3, 10)
-        b -= Pos(x, s*20, zr-T/2)*Cylinder(3.3, 10)
+    for x in (-C.HOLE_SPX/2, C.HOLE_SPX/2):      # agujeros de las pestanas con +-1 mm de holgura en horizontal y vertical
+        for zz in (zf+T/2, zr-T/2):
+            for dx in (-1,1):                                  # agujero cuadrado redondeado de 8.6 x 8.6: absorbe +-1 mm en las dos direcciones
+                for dy in (-1,1):
+                    b -= Pos(x+dx, s*C.HOLE_SPY/2+dy, zz)*Cylinder(3.3, 10)
+            b -= Pos(x, s*C.HOLE_SPY/2, zz)*Box(6.6, 8.6, 10)
+            b -= Pos(x, s*C.HOLE_SPY/2, zz)*Box(8.6, 6.6, 10)
     for zc in (Z_PIV+10, Z_ARC+10):      # ranura lisa (obround): dos semicirculos y un rectangulo
         b -= Pos(0, y_mid, zc-SLOT/2)*(Rot(90,0,0)*Cylinder(HOLE/2, 12))
         b -= Pos(0, y_mid, zc+SLOT/2)*(Rot(90,0,0)*Cylinder(HOLE/2, 12))
@@ -138,11 +145,13 @@ for zc in (Z_PIV, Z_ARC):
             SPL[(nm, key)] = add(SPL.get((nm, key)), shp)
 # tornillos M6x16 DIN912 a las tapas (8)
 for s in (1,-1):
-    for x in (-20,20):
+    for x in (-C.HOLE_SPX/2, C.HOLE_SPX/2):
         for zface, dirz in ((0.0,1),(-C.BODY_L,-1)):
             z0 = zface + dirz*T
-            head = Pos(x, s*20, z0 + dirz*3)*Cylinder(5,6)
-            shank = Pos(x, s*20, z0 - dirz*6)*Cylinder(3,12+0)
+            head = Pos(x, s*C.HOLE_SPY/2, z0 + dirz*(1.6+3))*Cylinder(5,6)            # M6x14 Allen + arandela M6 (OD 12) para cubrir el agujero de +-1 mm
+            shank = Pos(x, s*C.HOLE_SPY/2, z0 - dirz*5.4)*Cylinder(3,14)
+            capw = Pos(x, s*C.HOLE_SPY/2, z0 + dirz*0.8)*(Cylinder(6,1.6)-Cylinder(3.2,3))
+            SPL[('wash','cap')] = add(SPL.get(('wash','cap')), capw)
             bolts = add(bolts, head+shank)
             SPL[('bolt','cap')] = add(SPL.get(('bolt','cap')), head+shank)
 parts["Tornillos M6"]=(None,"#d9a82a")
@@ -167,21 +176,21 @@ parts["Arandelas base"]=(bw,"#b0b6bd")
 
 # ----- electrovalvula + tornilleria M4 (sobre la cara exterior del panel +Y; puertos hacia la arista vertical)
 YV0 = PANEL_IN + T                                  # cara exterior del panel
-vbody = Pos(VX, YV0+11, VZ)*Box(32,22,84.6)
+vbody = Pos(VX-1.1, YV0+11, VZ+6.7)*Box(32,22,98)          # plano oficial Aignep 01V S0 5 00 02: 98 x 32 x 22; patron de agujeros a 42.3 del extremo del muelle y descentrado 1.1 mm
 for _hx,_hz in VHOLES:
     vbody -= cylY(_hx, YV0+11, _hz, 4.2, 30)
-vcoil = Pos(VX, YV0+15, VZ+42.3+21)*Box(30,30,42) + Pos(VX, YV0+15+15+15, VZ+42.3+21)*Box(26,30,26)   # bobina y conector DIN (estimados)
+vcoil = Pos(VX-1.1, YV0+11, VZ+55.7+17.1)*Box(28,22,34.2) + Pos(VX-1.1, YV0+22+15, VZ+55.7+17.1)*Box(26,30,26)   # bobina (34.2 mm fuera del cuerpo) y conector DIN (estimado)   # bobina y conector DIN (estimados)
 vport = None
-for _dz in (-13, 13):
-    vport = add(vport, Pos(VX-16-7, YV0+11, VZ+_dz)*(Rot(0,90,0)*Cylinder(6,14)))
+for _dz in (-8.6, 8.6):
+    vport = add(vport, Pos(VX-17.1-7, YV0+8.4, VZ+_dz)*(Rot(0,90,0)*Cylinder(6,14)))
 parts["Electrovalvula (cuerpo)"] = (vbody, "#d9dcdf")
 parts["Electrovalvula (bobina)"] = (vcoil, "#26262a")
 parts["Racores G1/8 valvula"] = (vport, "#d9a82a")                      # salidas 4 (arriba, lado de la bobina) y 2, hacia la arista
 vexh = None
 for _dz in (-17.2, 17.2):                                           # escapes 5 y 3 (silenciadores de laton), borde contrario
-    vexh = add(vexh, Pos(VX+16+6, YV0+11, VZ+_dz)*(Rot(0,90,0)*Cylinder(5.5,12)))
+    vexh = add(vexh, Pos(VX+14.9+6, YV0+11, VZ+_dz)*(Rot(0,90,0)*Cylinder(5.5,12)))
 parts["Silenciadores 5 y 3"] = (vexh, "#c8a24a")
-parts["Racor entrada 1"] = (Pos(VX+16+7, YV0+11, VZ)*(Rot(0,90,0)*Cylinder(6,14)), "#e0643a")
+parts["Racor entrada 1"] = (Pos(VX+14.9+7, YV0+11, VZ)*(Rot(0,90,0)*Cylinder(6,14)), "#e0643a")
 vb=None; vn=None; vw=None
 for _hx,_hz in VHOLES:
     head = Pos(_hx, YV0+22+2, _hz)*(Rot(90,0,0)*Cylinder(3.5,4))
@@ -200,9 +209,9 @@ def _cyl_port(a_deg, sl, zl):
     L = loc_for(a_deg, sl)
     p0 = L*Pos(C.CAP_W/2 + C.PORT_L, 0, zl); p1 = L*Pos(C.CAP_W/2 + C.PORT_L + 30, 0, zl)
     return (p0.position.X, p0.position.Y, p0.position.Z), (p1.position.X, p1.position.Y, p1.position.Z)
-_vz = {'R': VZ+13, 'F': VZ-13}                       # puerto superior -> tapa trasera, inferior -> tapa delantera
-_vx = VX-16-14                                       # extremo del racor de la valvula
-_YV = YV0 + 11
+_vz = {'R': VZ+8.6, 'F': VZ-8.6}                       # puerto superior -> tapa trasera, inferior -> tapa delantera
+_vx = VX-17.1-14                                       # extremo del racor de la valvula
+_YV = YV0 + 8.4
 _STATIC = {
   'R': [(-10,_YV,_vz['R']+7), (-78,67,_vz['R']+40), (-78,43,_vz['R']+80), (-93,23,_vz['R']+106)],
   'F': [(-16,_YV,_vz['F']-13), (-64,84,_vz['F']-14), (-78,39,_vz['F']-9), (-56,11,_vz['F']+22)],

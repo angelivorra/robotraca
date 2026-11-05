@@ -3,11 +3,12 @@ vastago hacia +Z, cuerpo hacia -Z. Medidas en mm. (*) = estimado, por verificar.
 from build123d import *
 
 CAP_W      = 52.0     # tapa cuadrada
-HOLE_SP    = 40.0     # distancia entre agujeros de esquina
+HOLE_SPX   = 39.6     # entre agujeros de esquina, horizontal (39.7 y 39.1 medidos, fotos 40): nominal con +-1 mm de holgura en la aleta
+HOLE_SPY   = 39.6     # vertical (39.1 con las puntas del calibre, fotos 39-40)
 HOLE_D     = 5.0      # rosca M6 (broca ~5)
-HOLE_DEPTH = 12.0     # (*)
-BODY_L     = 210.0    # de tapa a tapa
-CAP_T      = 20.0     # (*) grosor de cada tapa
+HOLE_DEPTH = 11.0     # medida: tornillo de 40 con 29 fuera
+BODY_L     = 208.4    # de cara exterior a cara exterior de las tapas (medida con papel doblado)
+CAP_T      = 25.35    # grosor de cada tapa (25.4 y 25.3 medidos con calibre)
 TUBE_D     = 45.0
 TIE_D      = 6.0      # (*)
 BOSS_D, BOSS_H = 32.0, 14.2     # brida sobre las orejas
@@ -18,7 +19,7 @@ STROKE     = 80.0
 PORT_D, PORT_L = 10.0, 14.0     # racor push-in (*)
 
 def build(extended=0.0):
-    corners = [(sx*HOLE_SP/2, sy*HOLE_SP/2) for sx in (1,-1) for sy in (1,-1)]
+    corners = [(sx*HOLE_SPX/2, sy*HOLE_SPY/2) for sx in (1,-1) for sy in (1,-1)]
     front = Pos(0,0,-CAP_T/2)*Box(CAP_W,CAP_W,CAP_T)
     rear  = Pos(0,0,-BODY_L+CAP_T/2)*Box(CAP_W,CAP_W,CAP_T)
     tube  = Pos(0,0,-BODY_L/2)*Cylinder(TUBE_D/2, BODY_L-2*CAP_T)
