@@ -2,8 +2,10 @@
 
 Visor 3D (`index.html`) del soporte de un cilindro neumático 32/80 que acciona el pedal de un bombo.
 
-- Dos paneles triangulares de acero de 4 mm sobre un tablero de contrachapado de 18 mm, con 150 mm de hueco libre para el pedal.
+- Dos paneles triangulares de acero de 4 mm (base 200 mm, altura 382 mm) sobre un tablero de contrachapado de 90×90 cm y 18 mm, con 150 mm de hueco libre para el pedal.
 - Aletas de chapa en C atornilladas a las tapas del cilindro (M6 a 40 mm), con ranuras para ajustar alcance y ángulo.
+- Ajuste del cilindro: giro de 10° a 30° por la ranura curva y 50 mm de recorrido en las ranuras de las aletas (35 mm hacia arriba, 15 mm hacia abajo).
+- El visor incluye el bombo, el aro y el pedal de referencia, con la placa inclinada y girando por el talón.
 - Todo con tornillos y tuercas autoblocantes; las tuercas del tablero van por debajo, con arandela ancha.
 
 ## Carpeta `cad/`
@@ -18,6 +20,6 @@ python export_viewer.py   # regenera viewer_data.json (malla para el visor)
 
 - `conjunto.py`: paneles, soporte, tornillería y pedal de referencia. Las medidas están al principio.
 - `cilindro.py`: el cilindro 32/80 con sus medidas reales.
-- `conjunto_soporte.step` y `cilindro_32x80.step`: para abrir en FreeCAD u otro CAD.
+- `conjunto_soporte.step` (soporte, cilindro y tornillería) y `cilindro_32x80.step`: para abrir en FreeCAD u otro CAD.
 
 Las medidas marcadas con `(*)` son estimadas y están por verificar.

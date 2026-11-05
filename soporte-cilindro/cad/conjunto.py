@@ -10,13 +10,13 @@ PEDAL_W = 140                      # (*) ancho pedal -> condiciona el hueco entr
 PANEL_IN = 75                      # cara interior panel (y=+-75) -> hueco 150
 LEG_IN, LEG_OUT = 34, 38           # aleta del soporte: y 34..38
 SPACER_L = PANEL_IN - LEG_OUT      # 22
-P0 = (45, 18 + 342)                # pivote (x,z) mundo
-R_ARC = 80; ARC = (5, 35)          # ranura curva (grados desde vertical)
+P0 = (20, 18 + 334)                # pivote (x,z) mundo
+R_ARC = 80; ARC = (10, 30)          # ranura curva (grados desde vertical)
 Z_PIV, Z_ARC = -165, -85           # posicion de los 2 tornillos en el cilindro (z local)
-SLOT = 30
-PL, PH = 340, 392                  # largo base y alto del panel
+SLOT = 50
+PL, PH = 200, 382                  # largo base y alto del panel
 FLANGE = 26
-BASE_X = (45, 170, 295)
+BASE_X = (30, 100, 170)
 HOLE = 6.5
 BZ = BOARD[2]
 
@@ -28,7 +28,7 @@ def loc_for(a_deg, sl=0.0):
     O = (P0[0] + (-Z_PIV + sl)*dd[0], 0, P0[1] + (-Z_PIV + sl)*dd[2])
     return Pos(*O) * Rot(0, 180 - a_deg, 0)
 LOC = loc_for(ALPHA, 0.0)      # local cilindro -> mundo
-TIE = (18, BZ + 150)           # pasador de union trasero (entre paneles)
+TIE = (18, BZ + 110)           # pasador de union trasero (entre paneles)
 
 def cylY(x, y, z, dia, h): return Pos(x, y, z) * (Rot(90, 0, 0) * Cylinder(dia/2, h))
 def hexp(af, h): return extrude(RegularPolygon(af/1.7320508, 6), amount=h)
@@ -36,9 +36,11 @@ def hexp(af, h): return extrude(RegularPolygon(af/1.7320508, 6), amount=h)
 parts = {}   # nombre -> (shape, color)
 
 # ----- tablero + silentblocks
-parts["Tablero"] = (Pos(0,0,BZ/2)*Box(*BOARD), "#c8a46e")
+X_H = 233                      # cara exterior del aro del bombo (x)
+BOARD_CX = 330
+parts["Tablero"] = (Pos(BOARD_CX,0,BZ/2)*Box(*BOARD), "#c8a46e")
 sb=None
-for x in (-400,0,400):
+for x in (BOARD_CX-400,BOARD_CX,BOARD_CX+400):
     for y in (-400,0,400):
         c=Pos(x,y,-12.5)*Cylinder(15,25); sb=c if sb is None else sb+c
 parts["Silentblocks"]=(sb,"#222222")
@@ -91,7 +93,7 @@ def leg(s):
     for x in (-20,20):
         b -= Pos(x, s*20, zf+T/2)*Cylinder(3.3, 10)
         b -= Pos(x, s*20, zr-T/2)*Cylinder(3.3, 10)
-    for zc in (Z_PIV, Z_ARC):
+    for zc in (Z_PIV+10, Z_ARC+10):
         for k in range(11):
             zz = zc-SLOT/2+SLOT*k/10
             b -= Pos(0, y_mid, zz)*(Rot(90,0,0)*Cylinder(HOLE/2, 12))
@@ -164,7 +166,22 @@ for sg in (1,-1):
 parts["Pasador trasero"] = (tie + tie_n + tie_w, "#c9a227")
 parts["Separador del pasador"] = (cylY(TIE[0],0,TIE[1],16,2*PANEL_IN) - cylY(TIE[0],0,TIE[1],6.4,2*PANEL_IN+2), "#b0b6bd")
 
-parts["Pedal (referencia)"]=(Pos(150,0,BZ+22)*Box(200,PEDAL_W,44),"#b03a3a")
+# --- pedal de referencia (placa 30 cm, ancho 14->7 cm, reposo 40 mm / pulsada 30 mm en el punto de golpeo) + mecanismo junto al aro
+_w=[(0,70),(80,55),(130,50),(300,35)]
+_pts=[(X_H-d,w) for d,w in _w]+[(X_H-d,-w) for d,w in reversed(_w)]
+_plate0=Pos(0,0,BZ+10)*extrude(Polygon(*_pts, align=None),amount=15)   # cara superior a BZ+25 en la bisagra
+HINGE=(X_H-300, BZ+25)                # eje de giro: talon, el extremo mas lejano del bombo
+PLATE_TILT=5.0                         # grados, mas alta cerca del bombo
+_plate=Pos(HINGE[0],0,HINGE[1])*Rot(0,-PLATE_TILT,0)*Pos(-HINGE[0],0,-HINGE[1])*_plate0
+_mech=Pos(X_H-40,0,BZ+50)*Box(80,140,100)
+parts["Pedal (placa)"]=(_plate,"#b03a3a")
+parts["Pedal (mecanismo)"]=(_mech,"#7d2a2a")
+parts["Pedal (referencia)"]=(_plate+_mech,"#b03a3a")
+# --- bombo: 57 cm de diametro, 46 cm de fondo, apoyado en el tablero; aro en x=X_H
+_shell=Pos(X_H+10+230,0,BZ+285)*(Rot(0,90,0)*Cylinder(285,460))
+_hoop=Pos(X_H+10,0,BZ+285)*(Rot(0,90,0)*(Cylinder(295,20)-Cylinder(280,22)))
+parts["Bombo (referencia)"]=(_shell,"#17171a")
+parts["Aro del bombo"]=(_hoop,"#c4c8cc")
 
 if __name__=="__main__":
     import sys
