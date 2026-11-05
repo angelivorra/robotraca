@@ -4,7 +4,7 @@ def w2t(q): return (q.X, q.Z, -q.Y)
 items=[]   # (nombre, forma, color, grupo)
 def add_item(n,p,c,g): items.append((n,p,c,g))
 for k,(p,c) in parts.items():
-    if k in ("Tornillos M6","Tuercas autoblocantes","Arandelas y separadores","Pedal (referencia)"): continue
+    if k in ("Tornillos M6","Tuercas autoblocantes","Arandelas y separadores","Pedal (referencia)","Tubos de aire"): continue
     if k=="Tablero": add_item(k,p,"#8f6f45","static"); continue
     if k=="Pedal (placa)": add_item(k,p,c,"plate"); continue
     if k=="Panel acero":
@@ -29,8 +29,13 @@ pts={
  "p0":(P0[0],P0[1],0),"alpha":ALPHA,"r_arc":R_ARC,
  "pivot_out":W(0,PANEL_IN+T+2,Z_PIV),"pivot_nut":W(0,31,Z_PIV),"arc_out":W(0,PANEL_IN+T+2,Z_ARC),"arc_nut":W(0,31,Z_ARC),
  "rear_tab":W(0,20,-C.BODY_L-3),"front_tab":W(0,20,3),"base":(BASE_X[1],BZ+2,-BASE_Y),
- "tie":(TIE[0],TIE[1],0),"tip":W(0,0,C.BOSS_H+C.ROD_OUT),"pedal_rest":40,"pedal_travel":10,"hinge":(HINGE[0],HINGE[1],0),"tilt":PLATE_TILT,"s_min":-35,"s_max":15,"min_tip":25,"board_top":BZ,"hoop_x":X_H,"arc0":ARC[0],"arc1":ARC[1],
+ "tie":(TIE[0],TIE[1],0),"valve":(VX,VZ,-(YV0+11)),"tip":W(0,0,C.BOSS_H+C.ROD_OUT),"pedal_rest":40,"pedal_travel":10,"hinge":(HINGE[0],HINGE[1],0),"tilt":PLATE_TILT,"s_min":-35,"s_max":15,"min_tip":25,"board_top":BZ,"hoop_x":X_H,"arc0":ARC[0],"arc1":ARC[1],
 }
 pts={k:([round(x,1) for x in v] if isinstance(v,(tuple,list)) else v) for k,v in pts.items()}
-json.dump({"meshes":out,"pts":pts},open("viewer_data.json","w"),separators=(",",":"))
+tubes=[]
+for k,zl in (('R',-C.BODY_L+C.CAP_T/2),('F',-C.CAP_T/2)):
+    ee,oo=_cyl_port(ALPHA,0.0,zl)
+    tubes.append({"name":k,"static":[[round(c,1) for c in w2t(type("Q",(),{"X":p[0],"Y":p[1],"Z":p[2]})())] for p in [(_vx,_YV,_vz[k])]+_STATIC[k]],
+                  "att":[[round(c,1) for c in w2t(type("Q",(),{"X":p[0],"Y":p[1],"Z":p[2]})())] for p in (oo,ee)]})
+json.dump({"meshes":out,"pts":pts,"tubes":tubes},open("viewer_data.json","w"),separators=(",",":"))
 print(os.path.getsize("viewer_data.json")/1e6,"MB"); print(pts)

@@ -76,7 +76,12 @@ for i in range(31):
 BASE_Y = PANEL_IN + T + FLANGE/2 + 0
 for bx in BASE_X:
     panel -= Pos(bx, BASE_Y, BZ+T/2)*Cylinder(HOLE/2, 20)
+# --- electrovalvula Aignep 01V 5/2 (G1/8): 4 agujeros D4.2 -> M4. Fila ancha 31.8, fila estrecha 17.2, 23 entre filas, cuerpo 84.6x32x22
+VX, VZ = 45, 207                                   # centro del cuerpo en la cara exterior del panel +Y
+VHOLES = [(VX+11.5, VZ+15.9), (VX+11.5, VZ-15.9), (VX-11.5, VZ+8.6), (VX-11.5, VZ-8.6)]
 pan_l = panel; pan_r = mirror(panel, Plane.XZ)
+for _hx,_hz in VHOLES:
+    pan_l -= cylY(_hx, PANEL_IN+T/2, _hz, 5.0, 20)
 parts["Panel acero"] = (pan_l+pan_r, "#8f98a3")
 
 # ----- soporte del cilindro (2 aletas con tabs), en marco LOCAL del cilindro
@@ -156,6 +161,60 @@ for sg in (1,-1):
 parts["Tornillos base M6x35"]=(bb,"#d9a82a")
 parts["Tuercas base"]=(bn,"#e5c050")
 parts["Arandelas base"]=(bw,"#b0b6bd")
+
+# ----- electrovalvula + tornilleria M4 (sobre la cara exterior del panel +Y; puertos hacia la arista vertical)
+YV0 = PANEL_IN + T                                  # cara exterior del panel
+vbody = Pos(VX, YV0+11, VZ)*Box(32,22,84.6)
+for _hx,_hz in VHOLES:
+    vbody -= cylY(_hx, YV0+11, _hz, 4.2, 30)
+vcoil = Pos(VX, YV0+15, VZ-42.3-21)*Box(30,30,42) + Pos(VX, YV0+15+15+15, VZ-42.3-21)*Box(26,30,26)   # bobina y conector DIN (estimados)
+vport = None
+for _dz in (-13, 13):
+    vport = add(vport, Pos(VX-16-7, YV0+11, VZ+_dz)*(Rot(0,90,0)*Cylinder(6,14)))
+parts["Electrovalvula (cuerpo)"] = (vbody, "#d9dcdf")
+parts["Electrovalvula (bobina)"] = (vcoil, "#26262a")
+parts["Racores G1/8 valvula"] = (vport, "#d9a82a")
+vb=None; vn=None; vw=None
+for _hx,_hz in VHOLES:
+    head = Pos(_hx, YV0+22+2, _hz)*(Rot(90,0,0)*Cylinder(3.5,4))
+    shank = cylY(_hx, (YV0+22+YV0-9)/2, _hz, 4, 22+9)
+    wash = cylY(_hx, PANEL_IN-0.4, _hz, 9, 0.8) - cylY(_hx, PANEL_IN-0.4, _hz, 4.3, 2)
+    nut = Pos(_hx, PANEL_IN-0.8-2.5, _hz)*(Rot(90,0,0)*hexp(7,5).moved(Location((0,0,-2.5))))
+    vb=add(vb,head+shank); vw=add(vw,wash); vn=add(vn,nut)
+parts["Tornillos valvula M4x35"] = (vb, "#d9a82a")
+parts["Tuercas valvula M4"] = (vn, "#e5c050")
+parts["Arandelas valvula M4"] = (vw, "#b0b6bd")
+
+# ----- tubos de aire (PU, OD TUBE_D) de los puertos 4 y 2 de la valvula a los racores del cilindro
+TUBE_D = 6.0                                         # (*) diametro exterior supuesto
+def _cyl_port(a_deg, sl, zl):
+    """punto del extremo del racor del cilindro (local x=CAP_W/2+PORT_L) y un punto 30 mm mas alla, en coordenadas mundo"""
+    L = loc_for(a_deg, sl)
+    p0 = L*Pos(C.CAP_W/2 + C.PORT_L, 0, zl); p1 = L*Pos(C.CAP_W/2 + C.PORT_L + 30, 0, zl)
+    return (p0.position.X, p0.position.Y, p0.position.Z), (p1.position.X, p1.position.Y, p1.position.Z)
+_vz = {'R': VZ+13, 'F': VZ-13}                       # puerto superior -> tapa trasera, inferior -> tapa delantera
+_vx = VX-16-14                                       # extremo del racor de la valvula
+_YV = YV0 + 11
+_STATIC = {
+  'R': [(-11,_YV,_vz['R']+6), (-55,70,_vz['R']+45), (-62,25,_vz['R']+60), (-63,5,_vz['R']+85)],
+  'F': [(-24,_YV,_vz['F']+6), (-44,82,_vz['F']+27), (-86,35,_vz['F']+38), (-62,2,_vz['F']+22)],
+}
+def tube_points(a_deg=ALPHA, sl=15.0):
+    """cada tubo: [racor valvula, ...estaticos..., punto exterior del cilindro, racor cilindro] (de la valvula al cilindro)"""
+    out = {}
+    for k, zl in (('R', -C.BODY_L + C.CAP_T/2), ('F', -C.CAP_T/2)):
+        e, o = _cyl_port(a_deg, sl, zl)
+        out[k] = [(_vx, _YV, _vz[k])] + _STATIC[k] + [o, e]
+    return out
+def tube_solid(pts, r=TUBE_D/2):
+    path = Spline(*[Vector(*p) for p in pts])
+    prof = Plane(origin=Vector(*pts[0]), z_dir=path % 0) * Circle(r)
+    return sweep(prof, path)
+_tp = tube_points()
+_tubes = None
+for _k, _pts in _tp.items():
+    _tubes = add(_tubes, tube_solid(_pts))
+parts["Tubos de aire"] = (_tubes, "#2e7dd1")
 
 tie_len = 2*(PANEL_IN+T) + 2*(1.6+6) + 4
 tie = cylY(TIE[0], 0, TIE[1], 6, tie_len)
