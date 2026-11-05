@@ -8,14 +8,14 @@ ALPHA = 20.0                       # inclinacion cilindro desde la vertical haci
 T = 4.0                            # chapa
 PEDAL_W = 140                      # (*) ancho pedal -> condiciona el hueco entre paneles
 PANEL_IN = 75                      # cara interior panel (y=+-75) -> hueco 150
-LEG_IN, LEG_OUT = 34, 38           # aleta del soporte: y 34..38
+LEG_IN, LEG_OUT = 37, 41           # aleta del soporte: y 34..38
 SPACER_L = PANEL_IN - LEG_OUT      # 22
 P0 = (20, 18 + 334)                # pivote (x,z) mundo
 R_ARC = 80; ARC = (10, 30)          # ranura curva (grados desde vertical)
 Z_PIV, Z_ARC = -165, -85           # posicion de los 2 tornillos en el cilindro (z local)
 SLOT = 50
 PL, PH = 200, 382                  # largo base y alto del panel
-FLANGE = 26
+FLANGE = 32
 BASE_X = (30, 100, 170)
 HOLE = 6.5
 BZ = BOARD[2]
@@ -28,7 +28,7 @@ def loc_for(a_deg, sl=0.0):
     O = (P0[0] + (-Z_PIV + sl)*dd[0], 0, P0[1] + (-Z_PIV + sl)*dd[2])
     return Pos(*O) * Rot(0, 180 - a_deg, 0)
 LOC = loc_for(ALPHA, 0.0)      # local cilindro -> mundo
-TIE = (18, BZ + 110)           # pasador de union trasero (entre paneles)
+TIE = (18, BZ + 75)           # pasador de union trasero (entre paneles)
 
 def cylY(x, y, z, dia, h): return Pos(x, y, z) * (Rot(90, 0, 0) * Cylinder(dia/2, h))
 def hexp(af, h): return extrude(RegularPolygon(af/1.7320508, 6), amount=h)
@@ -70,15 +70,18 @@ panel += lip
 yc = PANEL_IN + T/2
 panel -= cylY(P0[0], yc, P0[1], HOLE, 20)
 panel -= cylY(TIE[0], yc, TIE[1], HOLE, 20)
-for i in range(31):
-    a = radians(ARC[0]+(ARC[1]-ARC[0])*i/30)
-    panel -= cylY(P0[0]+R_ARC*sin(a), yc, P0[1]-R_ARC*cos(a), HOLE, 20)
+_a0, _a1 = radians(ARC[0]), radians(ARC[1])
+_ring = cylY(P0[0], yc, P0[1], 2*(R_ARC+HOLE/2), 20) - cylY(P0[0], yc, P0[1], 2*(R_ARC-HOLE/2), 22)
+_wedge = Pos(0, yc+10, 0)*(Rot(90,0,0)*extrude(Polygon((P0[0],P0[1]),(P0[0]+3*R_ARC*sin(_a0),P0[1]-3*R_ARC*cos(_a0)),(P0[0]+3*R_ARC*sin(_a1),P0[1]-3*R_ARC*cos(_a1)), align=None), amount=20))
+panel -= (_ring & _wedge)                                          # ranura curva lisa
+for _aa in (_a0, _a1):
+    panel -= cylY(P0[0]+R_ARC*sin(_aa), yc, P0[1]-R_ARC*cos(_aa), HOLE, 20)
 BASE_Y = PANEL_IN + T + FLANGE/2 + 0
 for bx in BASE_X:
     panel -= Pos(bx, BASE_Y, BZ+T/2)*Cylinder(HOLE/2, 20)
 # --- electrovalvula Aignep 01V 5/2 (G1/8): 4 agujeros D4.2 -> M4. Fila ancha 31.8, fila estrecha 17.2, 23 entre filas, cuerpo 84.6x32x22
-VX, VZ = 45, 207                                   # centro del cuerpo en la cara exterior del panel +Y
-VHOLES = [(VX+11.5, VZ+15.9), (VX+11.5, VZ-15.9), (VX-11.5, VZ+8.6), (VX-11.5, VZ-8.6)]
+VX, VZ = 70, 150                                   # centro del cuerpo en la cara exterior del panel +Y
+VHOLES = [(VX-11.5, VZ+15.9), (VX-11.5, VZ-15.9), (VX+11.5, VZ+8.6), (VX+11.5, VZ-8.6)]   # fila ancha (salidas 4 y 2) hacia la arista (-x); fila estrecha (1, 3, 5) hacia +x; bobina arriba
 pan_l = panel; pan_r = mirror(panel, Plane.XZ)
 for _hx,_hz in VHOLES:
     pan_l -= cylY(_hx, PANEL_IN+T/2, _hz, 5.0, 20)
@@ -98,10 +101,10 @@ def leg(s):
     for x in (-20,20):
         b -= Pos(x, s*20, zf+T/2)*Cylinder(3.3, 10)
         b -= Pos(x, s*20, zr-T/2)*Cylinder(3.3, 10)
-    for zc in (Z_PIV+10, Z_ARC+10):
-        for k in range(11):
-            zz = zc-SLOT/2+SLOT*k/10
-            b -= Pos(0, y_mid, zz)*(Rot(90,0,0)*Cylinder(HOLE/2, 12))
+    for zc in (Z_PIV+10, Z_ARC+10):      # ranura lisa (obround): dos semicirculos y un rectangulo
+        b -= Pos(0, y_mid, zc-SLOT/2)*(Rot(90,0,0)*Cylinder(HOLE/2, 12))
+        b -= Pos(0, y_mid, zc+SLOT/2)*(Rot(90,0,0)*Cylinder(HOLE/2, 12))
+        b -= Pos(0, y_mid, zc)*Box(HOLE, 12, SLOT)
     return b
 legs = leg(1)+leg(-1)
 parts["Soporte cilindro (aletas)"] = (LOC*legs, "#3f7fd8")
@@ -167,13 +170,18 @@ YV0 = PANEL_IN + T                                  # cara exterior del panel
 vbody = Pos(VX, YV0+11, VZ)*Box(32,22,84.6)
 for _hx,_hz in VHOLES:
     vbody -= cylY(_hx, YV0+11, _hz, 4.2, 30)
-vcoil = Pos(VX, YV0+15, VZ-42.3-21)*Box(30,30,42) + Pos(VX, YV0+15+15+15, VZ-42.3-21)*Box(26,30,26)   # bobina y conector DIN (estimados)
+vcoil = Pos(VX, YV0+15, VZ+42.3+21)*Box(30,30,42) + Pos(VX, YV0+15+15+15, VZ+42.3+21)*Box(26,30,26)   # bobina y conector DIN (estimados)
 vport = None
 for _dz in (-13, 13):
     vport = add(vport, Pos(VX-16-7, YV0+11, VZ+_dz)*(Rot(0,90,0)*Cylinder(6,14)))
 parts["Electrovalvula (cuerpo)"] = (vbody, "#d9dcdf")
 parts["Electrovalvula (bobina)"] = (vcoil, "#26262a")
-parts["Racores G1/8 valvula"] = (vport, "#d9a82a")
+parts["Racores G1/8 valvula"] = (vport, "#d9a82a")                      # salidas 4 (arriba, lado de la bobina) y 2, hacia la arista
+vexh = None
+for _dz in (-17.2, 17.2):                                           # escapes 5 y 3 (silenciadores de laton), borde contrario
+    vexh = add(vexh, Pos(VX+16+6, YV0+11, VZ+_dz)*(Rot(0,90,0)*Cylinder(5.5,12)))
+parts["Silenciadores 5 y 3"] = (vexh, "#c8a24a")
+parts["Racor entrada 1"] = (Pos(VX+16+7, YV0+11, VZ)*(Rot(0,90,0)*Cylinder(6,14)), "#e0643a")
 vb=None; vn=None; vw=None
 for _hx,_hz in VHOLES:
     head = Pos(_hx, YV0+22+2, _hz)*(Rot(90,0,0)*Cylinder(3.5,4))
@@ -196,8 +204,8 @@ _vz = {'R': VZ+13, 'F': VZ-13}                       # puerto superior -> tapa t
 _vx = VX-16-14                                       # extremo del racor de la valvula
 _YV = YV0 + 11
 _STATIC = {
-  'R': [(-11,_YV,_vz['R']+6), (-55,70,_vz['R']+45), (-62,25,_vz['R']+60), (-63,5,_vz['R']+85)],
-  'F': [(-24,_YV,_vz['F']+6), (-44,82,_vz['F']+27), (-86,35,_vz['F']+38), (-62,2,_vz['F']+22)],
+  'R': [(-10,_YV,_vz['R']+7), (-78,67,_vz['R']+40), (-78,43,_vz['R']+80), (-93,23,_vz['R']+106)],
+  'F': [(-16,_YV,_vz['F']-13), (-64,84,_vz['F']-14), (-78,39,_vz['F']-9), (-56,11,_vz['F']+22)],
 }
 def tube_points(a_deg=ALPHA, sl=15.0):
     """cada tubo: [racor valvula, ...estaticos..., punto exterior del cilindro, racor cilindro] (de la valvula al cilindro)"""
